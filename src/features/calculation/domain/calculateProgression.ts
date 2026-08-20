@@ -6,16 +6,32 @@ export const calculateProgressionSummary = (
   params: ProgressionParams,
   selectedCompetencias: string[]
 ): ProgressionSummary => {
-  // Filter records within the selected competencias
+  // Filter records strictly within the selected competencias
   const activeRecords = records.filter(r => selectedCompetencias.includes(r.competencia));
-  const qtdMeses = activeRecords.length;
+  const numSelectedMonths = activeRecords.length;
 
-  if (qtdMeses === 0) {
+  // Compute retroactive proportionality (dias retroativos no mês inicial)
+  const diasMesInicial = Math.min(30, Math.max(1, params.diasRetroativos ?? 30));
+  
+  let qtdMesesEquivalentes = 0;
+  let totalDiasRetroativos = 0;
+
+  if (numSelectedMonths === 1) {
+    qtdMesesEquivalentes = roundMoney(diasMesInicial / 30);
+    totalDiasRetroativos = diasMesInicial;
+  } else if (numSelectedMonths > 1) {
+    qtdMesesEquivalentes = roundMoney((numSelectedMonths - 1) + (diasMesInicial / 30));
+    totalDiasRetroativos = (numSelectedMonths - 1) * 30 + diasMesInicial;
+  }
+
+  if (numSelectedMonths === 0) {
     return {
       server: { nome: '', matricula: '', cargo: '', orgao: '' },
       params,
       competenciasDisponiveis: records.map(r => r.competencia),
       competenciasSelecionadas: [],
+      totalDiasRetroativos: 0,
+      qtdMesesEquivalentes: 0,
       rows: [],
       totalLetra1Mensal: 0,
       totalLetra2Mensal: 0,
@@ -30,7 +46,7 @@ export const calculateProgressionSummary = (
   // 1. Identify Base Salary in Letra 1 (Verba 50 or largest salary item)
   let baseSalaryLetra1 = 0;
   activeRecords.forEach(rec => {
-    const baseEvent = rec.eventos.find(e => e.codigo === '50' || e.descricao.toUpperCase().includes('SALÁRIO BASE') || e.descricao.toUpperCase().includes('SALARIO BASE'));
+    const baseEvent = rec.eventos.find(e => e.codigo === '50' || e.descricao.toUpperCase().includes('SALÁRIO BASE') || e.descricao.toUpperCase().includes('SALARIO BASE') || e.descricao.toUpperCase() === 'BASE');
     if (baseEvent) {
       baseSalaryLetra1 = Math.max(baseSalaryLetra1, baseEvent.valor);
     }
@@ -72,10 +88,22 @@ export const calculateProgressionSummary = (
     });
   });
 
-  const rows: CalculatedEventRow[] = [];
+  // Separate non-ferias and ferias events so remunerative base can be computed first
+  const intermediateRows: Array<{
+    codigo: string;
+    descricao: string;
+    referencia: string;
+    l1Valor: number;
+    pctAplicado: number;
+    l2Valor: number;
+    isSalarioBase: boolean;
+    isFerias: boolean;
+  }> = [];
 
+  // Pass 1: Compute non-ferias items
   eventGroupMap.forEach((item) => {
-    const isSalarioBase = item.codigo === '50' || item.descricao.toUpperCase().includes('SALÁRIO BASE') || item.descricao.toUpperCase().includes('SALARIO BASE');
+    const isSalarioBase = item.codigo === '50' || item.descricao.toUpperCase().includes('SALÁRIO BASE') || item.descricao.toUpperCase().includes('SALARIO BASE') || item.descricao.toUpperCase() === 'BASE';
+    const isFerias = item.codigo === '163' || item.descricao.toUpperCase().includes('FÉRIAS') || item.descricao.toUpperCase().includes('FERIAS');
     const l1Valor = roundMoney(item.totalValorLetra1 / item.count);
     
     let l2Valor = 0;
@@ -84,44 +112,72 @@ export const calculateProgressionSummary = (
     if (isSalarioBase) {
       l2Valor = baseSalaryLetra2;
       pctAplicado = params.percentualProgressao;
-    } else if (item.codigo === '149' || item.descricao.toUpperCase().includes('ATS') || item.descricao.toUpperCase().includes('TEMPO DE SERVIÇO')) {
-      // ATS (Adicional de Tempo de Serviço)
-      pctAplicado = params.percentualATS;
-      l2Valor = roundMoney(baseSalaryLetra2 * (params.percentualATS / 100));
-    } else if (item.codigo === '104' || item.descricao.toUpperCase().includes('INCENTIVO') || item.descricao.toUpperCase().includes('TITULAÇÃO')) {
-      // Titulação / Incentivo Funcional
-      pctAplicado = params.percentualTitulacao;
-      l2Valor = roundMoney(baseSalaryLetra2 * (params.percentualTitulacao / 100));
     } else if (item.codigo === '80' || item.descricao.toUpperCase().includes('INSALUBRIDADE') || item.descricao.toUpperCase().includes('RISCO')) {
-      // Insalubridade / Risco
-      pctAplicado = params.percentualRiscoInsalubridade;
-      l2Valor = roundMoney(baseSalaryLetra2 * (params.percentualRiscoInsalubridade / 100));
-    } else if (item.codigo === '72' || item.descricao.toUpperCase().includes('HORA EXTRA') || item.descricao.toUpperCase().includes('HE')) {
-      // Hora Extra: ((Base / Divisor) * 1.5) * Qtd Horas
-      const horasNum = parseFloat(item.referencia.replace(/[^\d\.]/g, '')) || 15;
-      l2Valor = roundMoney(((baseSalaryLetra2 / params.divisorJornada) * 1.5) * horasNum);
-      pctAplicado = 50;
-    } else if (item.codigo === '85' || item.descricao.toUpperCase().includes('NOTURNO')) {
-      // Adicional Noturno: ((Base / Divisor) * 0.20) * Qtd Horas
-      const horasNum = parseFloat(item.referencia.replace(/[^\d\.]/g, '')) || 20;
-      l2Valor = roundMoney(((baseSalaryLetra2 / params.divisorJornada) * 0.20) * horasNum);
-      pctAplicado = 20;
-    } else if (item.codigo === '163' || item.descricao.toUpperCase().includes('FÉRIAS') || item.descricao.toUpperCase().includes('FERIAS')) {
-      // Férias 1/3 (calculado se ativado no final ou por evento)
+      // Insalubridade / Risco: Valor fixo referente ao salário mínimo/estatutário, NÃO altera por letra
+      l2Valor = l1Valor;
+      pctAplicado = 0;
+    } else if (!isFerias) {
+      // Demais verbas remuneratórias reajustam proporcionalmente ao aumento da base (Letra 1 -> Letra 2)
       l2Valor = roundMoney(l1Valor * progressionFactor);
-      pctAplicado = params.percentualProgressao;
-    } else {
-      // Proporcional padrão pela progressão
-      l2Valor = roundMoney(l1Valor * progressionFactor);
-      pctAplicado = params.percentualProgressao;
+      
+      const refNum = parseFloat(item.referencia.replace(',', '.').replace(/[^\d\.]/g, ''));
+      pctAplicado = refNum > 0 ? refNum : params.percentualProgressao;
+    }
+
+    intermediateRows.push({
+      codigo: item.codigo,
+      descricao: item.descricao,
+      referencia: item.referencia,
+      l1Valor,
+      pctAplicado,
+      l2Valor,
+      isSalarioBase,
+      isFerias
+    });
+  });
+
+  // Helper: Soma das verbas remuneratórias que compõem a base de férias
+  const codigosVerbasRemuneratorias = ['50', '149', '104', '80', '72', '85', 'dsr', 'tit_saude', 'produtividade', 'periculosidade', 'periculo_he', 'fg_fc'];
+
+  const getBaseRemuneratoriaFerias = (letra: 'L1' | 'L2'): number => {
+    return intermediateRows
+      .filter(it => !it.isFerias && (codigosVerbasRemuneratorias.includes(it.codigo) || it.isSalarioBase))
+      .reduce((acc, it) => acc + (letra === 'L1' ? it.l1Valor : it.l2Valor), 0);
+  };
+
+  const rows: CalculatedEventRow[] = [];
+
+  // Pass 2: Finalize rows including Férias 1/3
+  intermediateRows.forEach((item) => {
+    let l1Valor = item.l1Valor;
+    let l2Valor = item.l2Valor;
+    let pctAplicado = item.pctAplicado;
+
+    if (item.isFerias) {
+      // Quantidade de dias de férias gozados (extraído da referência da ficha, ex: 15 dias ou 30 dias)
+      const refNum = parseFloat(item.referencia.replace(',', '.').replace(/[^\d\.]/g, ''));
+      const diasFerias = (refNum > 0 && refNum <= 30) ? refNum : (params.diasFerias || 15);
+
+      // Soma das verbas que compõem a remuneração para Letra 1 e Letra 2
+      const somaVerbasL1 = getBaseRemuneratoriaFerias('L1');
+      const somaVerbasL2 = getBaseRemuneratoriaFerias('L2');
+
+      // Base de cálculo proporcional aos dias gozados + 1/3 Constitucional:
+      // (Remuneração * (diasFerias / 30)) / 3
+      l1Valor = roundMoney(((somaVerbasL1 * (diasFerias / 30)) / 3));
+      l2Valor = roundMoney(((somaVerbasL2 * (diasFerias / 30)) / 3));
+      pctAplicado = 33.33; // 1/3 Constitucional
     }
 
     const diferencaUnitaria = roundMoney(l2Valor - l1Valor);
-    const totalDiferenca = roundMoney(diferencaUnitaria * qtdMeses);
+    
+    // Férias 1/3 é evento pontual de 1 único gozo (ocorrência = 1), não se multiplica por todos os meses recorrentes
+    const qtdMesesEvento = item.isFerias ? 1 : qtdMesesEquivalentes;
+    const totalDiferenca = roundMoney(diferencaUnitaria * qtdMesesEvento);
 
     // Reflexo 13º e Férias por evento
-    const reflexo13 = params.aplicarReflexo13 ? roundMoney(totalDiferenca * (1 / 12)) : 0;
-    const reflexoFerias = params.aplicarReflexoFerias ? roundMoney(totalDiferenca * (1 / 3) * (1 / 12)) : 0;
+    const reflexo13 = params.aplicarReflexo13 && !item.isFerias ? roundMoney(totalDiferenca * (1 / 12)) : 0;
+    const reflexoFerias = params.aplicarReflexoFerias && !item.isFerias ? roundMoney(totalDiferenca * (1 / 3) * (1 / 12)) : 0;
 
     rows.push({
       codigo: item.codigo,
@@ -131,11 +187,12 @@ export const calculateProgressionSummary = (
       percentualAplicado: pctAplicado,
       letra2Valor: l2Valor,
       diferencaUnitaria,
-      qtdMeses,
+      qtdMeses: qtdMesesEvento,
+      totalDiasRetroativos,
       totalDiferenca,
       reflexo13,
       reflexoFerias,
-      isSalarioBase
+      isSalarioBase: item.isSalarioBase
     });
   });
 
@@ -143,7 +200,7 @@ export const calculateProgressionSummary = (
   const totalLetra1Mensal = roundMoney(rows.reduce((sum, r) => sum + r.letra1Valor, 0));
   const totalLetra2Mensal = roundMoney(rows.reduce((sum, r) => sum + r.letra2Valor, 0));
   const totalDiferencaMensal = roundMoney(totalLetra2Mensal - totalLetra1Mensal);
-  const totalDiferencaAcumulada = roundMoney(totalDiferencaMensal * qtdMeses);
+  const totalDiferencaAcumulada = roundMoney(rows.reduce((sum, r) => sum + r.totalDiferenca, 0));
 
   const totalReflexo13 = roundMoney(rows.reduce((sum, r) => sum + r.reflexo13, 0));
   const totalReflexoFerias = roundMoney(rows.reduce((sum, r) => sum + r.reflexoFerias, 0));
@@ -154,6 +211,8 @@ export const calculateProgressionSummary = (
     params,
     competenciasDisponiveis: records.map(r => r.competencia),
     competenciasSelecionadas: selectedCompetencias,
+    totalDiasRetroativos,
+    qtdMesesEquivalentes,
     rows,
     totalLetra1Mensal,
     totalLetra2Mensal,

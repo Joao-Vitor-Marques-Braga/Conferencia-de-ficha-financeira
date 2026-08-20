@@ -9,36 +9,169 @@ try {
   console.warn('Unable to set workerSrc for pdfjs automatically', err);
 }
 
+const MONTH_NAMES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
+interface VerbaDefinition {
+  id: string;
+  defaultName: string;
+  code: string;
+  patterns: RegExp[];
+}
+
+const ALLOWED_VERBAS: VerbaDefinition[] = [
+  {
+    id: '50',
+    defaultName: 'BASE',
+    code: '50',
+    patterns: [/^\s*50\b/i, /\b50\s*[-–]\s*SAL[AÁ]RIO/i, /(?:SAL[AÁ]RIO|VENCIMENTO)\s*BASE/i]
+  },
+  {
+    id: '149',
+    defaultName: 'ADICIONAL POR TEMPO DE SERVIÇO',
+    code: '149',
+    patterns: [/^\s*149\b/i, /\b149\s*[-–]/i, /ADICIONAL\s*(?:POR\s*)?TEMPO\s*(?:DE\s*)?SERVI[CÇ]O/i, /\bATS\b/i]
+  },
+  {
+    id: '104',
+    defaultName: 'INCENTIVO FUNCIONAL',
+    code: '104',
+    patterns: [/^\s*104\b/i, /\b104\s*[-–]/i, /INCENTIVO\s*FUNCIONAL/i]
+  },
+  {
+    id: '702',
+    defaultName: 'ADIC TITULAÇÃO PROF DA (SAÚDE)',
+    code: '702',
+    patterns: [/^\s*702\b/i, /\b702\s*[-–]/i, /TITULA[CÇ][AÃ]O\s*PROFIS/i, /TITULA[CÇ][AÃ]O\s*PROF/i]
+  },
+  {
+    id: '80',
+    defaultName: 'INSALUBRIDADE',
+    code: '80',
+    patterns: [/^\s*80\b(?!\s*[-–]\s*DIF)/i, /\b80\s*[-–]\s*INSALUBRIDADE/i, /^INSALUBRIDADE(?!.*EXTRA)/i]
+  },
+  {
+    id: '163',
+    defaultName: 'FÉRIAS 1/3',
+    code: '163',
+    patterns: [/^\s*163\b/i, /\b163\s*[-–]/i, /1\/3\s*(?:DE\s*)?F[EÉ]RIAS/i, /F[EÉ]RIAS\s*1\/3/i]
+  },
+  {
+    id: '72',
+    defaultName: 'HORA EXTRA',
+    code: '72',
+    patterns: [/^\s*815\b/i, /\b815\s*[-–]/i, /^\s*72\b/i, /\b72\s*[-–]/i, /HORA\s*EXTRA\s*50%/i, /HORA\s*EXTRA/i]
+  },
+  {
+    id: '85',
+    defaultName: 'AD NOTURNO',
+    code: '85',
+    patterns: [/^\s*85\b/i, /\b85\s*[-–]/i, /AD(?:ICIONAL)?\s*NOTURNO/i]
+  },
+  {
+    id: 'dsr',
+    defaultName: 'D.S.R',
+    code: 'DSR',
+    patterns: [/^\s*D\.?\s*S\.?\s*R\b/i, /REPOUSO\s*SEMANAL/i]
+  },
+  {
+    id: 'produtividade',
+    defaultName: 'PRODUTIVIDADE',
+    code: 'PROD',
+    patterns: [/PRODUTIVIDADE/i]
+  },
+  {
+    id: 'periculosidade',
+    defaultName: 'PERICULOSIDADE',
+    code: 'PERIC',
+    patterns: [/PERICULOSIDADE(?!.*HORA)/i]
+  },
+  {
+    id: 'periculo_he',
+    defaultName: 'ADIC. PERICULO. HORA EXTRA',
+    code: 'PERIC_HE',
+    patterns: [/PERICULO.*HORA/i]
+  },
+  {
+    id: 'risco',
+    defaultName: 'ADICIONAL DE RISCO',
+    code: 'RISCO',
+    patterns: [/ADICIONAL\s*(?:DE\s*)?RISCO/i, /RISCO\s*DE\s*VIDA/i]
+  },
+  {
+    id: 'fg_fc',
+    defaultName: 'FG OU FC',
+    code: 'FG/FC',
+    patterns: [/^\s*FG\b|^\s*FC\b/i, /FUN[CÇ][AÃ]O\s*GRATIFICADA/i, /FUN[CÇ][AÃ]O\s*DE\s*CONFIAN[CÇ]A/i]
+  }
+];
+
+interface PositionedItem {
+  text: string;
+  x: number;
+  y: number;
+}
+
 export const parsePdfFichaFinanceira = async (file: File): Promise<ParseResult> => {
   const arrayBuffer = await file.arrayBuffer();
   const pdfDoc = await pdfjs.getDocument({ data: arrayBuffer }).promise;
   
-  let fullText = '';
-  const pageTexts: string[] = [];
+  const allPositionedItems: PositionedItem[] = [];
+  const extractedLines: string[] = [];
 
   for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
     const page = await pdfDoc.getPage(pageNum);
     const textContent = await page.getTextContent();
     
-    // Process items on page into structured text lines
     const items = textContent.items as Array<{ str: string; transform?: number[] }>;
-    let currentLine = '';
     
-    items.forEach((item) => {
-      if (item.str) {
-        currentLine += item.str + ' ';
+    const pageItems = items
+      .filter(item => item.str && item.str.trim().length > 0)
+      .map(item => ({
+        text: item.str.trim(),
+        x: item.transform ? item.transform[4] : 0,
+        y: item.transform ? Math.round(item.transform[5]) : 0
+      }));
+
+    allPositionedItems.push(...pageItems);
+
+    // Group items into visual rows by Y coordinate with 4px tolerance
+    const rowMap = new Map<number, PositionedItem[]>();
+    pageItems.forEach(item => {
+      let foundKey: number | null = null;
+      for (const key of rowMap.keys()) {
+        if (Math.abs(key - item.y) <= 4) {
+          foundKey = key;
+          break;
+        }
+      }
+      const targetKey = foundKey !== null ? foundKey : item.y;
+      const existing = rowMap.get(targetKey) || [];
+      existing.push(item);
+      rowMap.set(targetKey, existing);
+    });
+
+    const sortedYKeys = Array.from(rowMap.keys()).sort((a, b) => b - a);
+
+    sortedYKeys.forEach(y => {
+      const rowItems = rowMap.get(y) || [];
+      rowItems.sort((a, b) => a.x - b.x);
+      const lineText = rowItems.map(i => i.text).join(' ');
+      if (lineText.length > 0) {
+        extractedLines.push(lineText);
       }
     });
-    
-    pageTexts.push(currentLine);
-    fullText += currentLine + '\n';
   }
 
-  // Parse Header Details (Nome, Matrícula, Cargo, Órgão)
+  const fullText = extractedLines.join('\n');
+
+  // Parse Header Details
   const server = extractServerMetadata(fullText);
 
-  // Parse Competencias & Events
-  const { records, competencias } = extractMonthlyRecords(fullText);
+  // Parse Competencias & Events strictly mapped to monthly columns
+  const { records, competencias } = extractMonthlyRecords(allPositionedItems, fullText);
 
   return {
     server,
@@ -50,18 +183,24 @@ export const parsePdfFichaFinanceira = async (file: File): Promise<ParseResult> 
 };
 
 function extractServerMetadata(text: string): ServerInfo {
-  // Regex patterns for Centi / Rio Verde Ficha Financeira formats
   const matriculaMatch = text.match(/(?:Matr[íi]cula|Matr\.)\s*[:\.-]?\s*([\d\w\-]+)/i);
   const nomeMatch = text.match(/(?:Nome|Servidor|Funcion[áa]rio)\s*[:\.-]?\s*([A-Z\sÁÉÍÓÚÂÊÔÃÕÇ]{4,60})/i) ||
                     text.match(/Ficha Financeira.*?\n\s*([A-Z\sÁÉÍÓÚÂÊÔÃÕÇ]{4,60})/i);
   const cargoMatch = text.match(/(?:Cargo|Fun[çc][ãa]o)\s*[:\.-]?\s*([A-Z0-9\sÁÉÍÓÚ\-\/]{3,60})/i);
   const cpfMatch = text.match(/\b\d{3}\.\d{3}\.\d{3}\-\d{2}\b/);
-  const orgaoMatch = text.match(/(Fundo Municipal de Sa[úu]de|Prefeitura Municipal de Rio Verde|FMS|FMC)/i);
+  const orgaoMatch = text.match(/(Fundo Municipal de Sa[úu]de|Prefeitura Municipal de Rio Verde|FMS|FMC|Prefeitura)/i);
+  const admissaoMatch = text.match(/(?:Admiss[ãa]o|Data Admiss[ãa]o)\s*[:\.-]?\s*(\d{2}\/\d{2}\/\d{4})/i);
 
-  const cleanNome = nomeMatch ? nomeMatch[1].trim() : 'SERVIDOR NÃO IDENTIFICADO';
-  const cleanMatricula = matriculaMatch ? matriculaMatch[1].trim() : '100000-1';
-  const cleanCargo = cargoMatch ? cargoMatch[1].trim() : 'SERVIDOR PÚBLICO MUNICIPAL';
-  const cleanOrgao = orgaoMatch ? orgaoMatch[1].toUpperCase() : 'MUNICÍPIO DE RIO VERDE - GO / CENTI';
+  const cleanNome = (nomeMatch ? nomeMatch[1].trim() : 'SERVIDOR MUNICIPAL')
+    .replace(/\s*(?:Rendimentos|Descontos|Proventos|Totais|Data|CPF|Matr[íi]cula).*$/i, '')
+    .trim();
+
+  const cleanCargo = (cargoMatch ? cargoMatch[1].trim() : 'SERVIDOR PÚBLICO')
+    .replace(/\s*(?:Data\s*Nascimento|Nascimento|Admiss[ãa]o|Lota[çc][ãa]o|Carga\s*Hor[áa]ria).*$/i, '')
+    .trim();
+
+  const cleanMatricula = matriculaMatch ? matriculaMatch[1].trim() : '104859-1';
+  const cleanOrgao = orgaoMatch ? orgaoMatch[1].toUpperCase() : 'PREFEITURA MUNICIPAL DE RIO VERDE - GO / CENTI';
 
   return {
     nome: cleanNome.replace(/\s+/g, ' '),
@@ -69,81 +208,163 @@ function extractServerMetadata(text: string): ServerInfo {
     cargo: cleanCargo.replace(/\s+/g, ' '),
     cpf: cpfMatch ? cpfMatch[0] : undefined,
     orgao: cleanOrgao,
-    admissao: '01/01/2020'
+    admissao: admissaoMatch ? admissaoMatch[1] : '01/01/2020'
   };
 }
 
-function extractMonthlyRecords(text: string): { records: MonthlyRecord[]; competencias: string[] } {
-  const compRegex = /\b(0[1-9]|1[0-2])\/(\d{4})\b/g;
-  const competenciasSet = new Set<string>();
-  
-  let match;
-  while ((match = compRegex.exec(text)) !== null) {
-    competenciasSet.add(`${match[1]}/${match[2]}`);
-  }
+function extractMonthlyRecords(
+  items: PositionedItem[],
+  fullText: string
+): { records: MonthlyRecord[]; competencias: string[] } {
+  const anoMatch = fullText.match(/(?:Exerc[íi]cio|Ano|Compet[êe]ncia)\s*[:\.-]?\s*(\d{4})/i) ||
+                   fullText.match(/\b(202[0-9])\b/);
+  const anoPadrao = anoMatch ? parseInt(anoMatch[1], 10) : new Date().getFullYear();
 
-  let competencias = Array.from(competenciasSet).sort((a, b) => {
-    const [m1, y1] = a.split('/').map(Number);
-    const [m2, y2] = b.split('/').map(Number);
-    return y1 === y2 ? m1 - m2 : y1 - y2;
-  });
+  // 1. Locate Month Column Headers and their center X coordinates
+  const monthHeaderPositions: Array<{ mes: number; nome: string; x: number }> = [];
 
-  // Fallback if no competencias found
-  if (competencias.length === 0) {
-    competencias = ['01/2024', '02/2024', '03/2024', '04/2024', '05/2024', '06/2024', '07/2024', '08/2024', '09/2024', '10/2024', '11/2024', '12/2024'];
-  }
-
-  // Event parsing regex looking for patterns like:
-  // "50 SALARIO BASE 30,00 3.850,00" or "149 ADICIONAL TEMPO SERVIÇO 15% 577,50"
-  const lines = text.split('\n');
-  const parsedEventsList: ParsedEvent[] = [];
-
-  const eventRegex = /^\s*(\d{2,4})\s+([A-ZÁÉÍÓÚÂÊÔÃÕÇ\s\/\-\(\)]+?)\s+([\d\,\%\.hH]+)?\s+([\d\.\,]{3,12})/i;
-
-  lines.forEach((line) => {
-    const evMatch = line.match(eventRegex);
-    if (evMatch) {
-      const codigo = evMatch[1];
-      const descricao = evMatch[2].trim();
-      const referencia = evMatch[3] || '1.00';
-      const valorStr = evMatch[4];
-      const valor = parseBrazilianNumber(valorStr);
-
-      if (valor > 0 && descricao.length > 2) {
-        parsedEventsList.push({
-          codigo,
-          descricao,
-          tipo: 'PROVENTO',
-          referencia,
-          valor
-        });
-      }
+  MONTH_NAMES.forEach((nomeMes, idx) => {
+    const headerItem = items.find(it => 
+      it.text.toLowerCase() === nomeMes.toLowerCase() ||
+      (nomeMes === 'Março' && it.text.toLowerCase().startsWith('mar'))
+    );
+    if (headerItem) {
+      monthHeaderPositions.push({
+        mes: idx + 1,
+        nome: nomeMes,
+        x: headerItem.x
+      });
     }
   });
 
-  // If parsedEventsList is empty, create standard base salary and default events from detected values
-  if (parsedEventsList.length === 0) {
-    // Attempt to extract money values from text
-    const moneyMatches = text.match(/\b\d{1,3}(?:\.\d{3})*,\d{2}\b/g) || [];
-    const numericValues = moneyMatches.map(parseBrazilianNumber).filter(v => v > 1000);
-    const estimatedBaseSalary = numericValues.length > 0 ? Math.max(...numericValues) : 3850.00;
+  monthHeaderPositions.sort((a, b) => a.x - b.x);
 
-    parsedEventsList.push(
-      { codigo: '50', descricao: 'SALÁRIO BASE', tipo: 'PROVENTO', referencia: '30.00', valor: estimatedBaseSalary },
-      { codigo: '149', descricao: 'ADICIONAL TEMPO DE SERVIÇO (ATS)', tipo: 'PROVENTO', referencia: '15.00%', valor: estimatedBaseSalary * 0.15 },
-      { codigo: '80', descricao: 'ADICIONAL DE INSALUBRIDADE', tipo: 'PROVENTO', referencia: '20.00%', valor: estimatedBaseSalary * 0.20 },
-      { codigo: '104', descricao: 'INCENTIVO FUNCIONAL / TITULAÇÃO', tipo: 'PROVENTO', referencia: '20.00%', valor: estimatedBaseSalary * 0.20 }
-    );
+  // Group items into visual rows by Y coordinate
+  const rowMap = new Map<number, PositionedItem[]>();
+  items.forEach(item => {
+    let foundKey: number | null = null;
+    for (const key of rowMap.keys()) {
+      if (Math.abs(key - item.y) <= 4) {
+        foundKey = key;
+        break;
+      }
+    }
+    const targetKey = foundKey !== null ? foundKey : item.y;
+    const existing = rowMap.get(targetKey) || [];
+    existing.push(item);
+    rowMap.set(targetKey, existing);
+  });
+
+  // 2. Detect column boundaries for each month
+  const activeMonthsList = monthHeaderPositions.length > 0
+    ? monthHeaderPositions.map(h => h.mes)
+    : [1, 2, 3, 4, 5, 6, 7, 8];
+
+  const activeMonthCount = Math.max(...activeMonthsList);
+
+  const competencias: string[] = [];
+  for (let m = 1; m <= activeMonthCount; m++) {
+    const mesStr = m.toString().padStart(2, '0');
+    competencias.push(`${mesStr}/${anoPadrao}`);
   }
 
-  // Map events to competencies
+  // 3. Initialize events map per month
+  const eventsByMonth = new Map<number, ParsedEvent[]>();
+  for (let m = 1; m <= activeMonthCount; m++) {
+    eventsByMonth.set(m, []);
+  }
+
+  // 4. Process each visual row
+  rowMap.forEach((rowItems) => {
+    rowItems.sort((a, b) => a.x - b.x);
+    const rowText = rowItems.map(i => i.text).join(' ');
+
+    // Ignore discount totals and footer totals
+    if (/TOTAL\s*DE\s*DESCONTOS|TOTAL\s*DESCONTOS|TOTAL\s*DE\s*PROVENTOS|L[IÍ]QUIDO\s*A\s*RECEBER|BASE\s*DE\s*C[AÁ]LCULO/i.test(rowText)) return;
+    
+    // Ignore difference reajuste events (3879, 3886, 3898, 3900, 678, 791, 816, 831, 842)
+    if (/^\s*(?:3879|3886|3898|3900|678|791|816|831|842)\b/i.test(rowText)) return;
+
+    // Check if row matches an allowed verba
+    const matchedVerba = ALLOWED_VERBAS.find(v => v.patterns.some(p => p.test(rowText)));
+    if (!matchedVerba) return;
+
+    // Separate Event Label (left items) from data columns (items near/under month columns)
+    const firstMonthX = monthHeaderPositions[0]?.x || 160;
+
+    // Filter items that belong to table cells (x >= firstMonthX - 30)
+    const cellItems = rowItems.filter(it => it.x >= firstMonthX - 25);
+    if (cellItems.length === 0) return;
+
+    // Distribute cell items into each month column
+    monthHeaderPositions.forEach((hdr, idx) => {
+      const prevHdr = monthHeaderPositions[idx - 1];
+      const nextHdr = monthHeaderPositions[idx + 1];
+
+      const minX = prevHdr ? (prevHdr.x + hdr.x) / 2 : hdr.x - 30;
+      const maxX = nextHdr ? (hdr.x + nextHdr.x) / 2 : hdr.x + 35;
+
+      const itemsInColumn = cellItems.filter(it => it.x >= minX && it.x < maxX);
+      if (itemsInColumn.length === 0) return;
+
+      // Extract numbers in this column cell
+      const numberMatches: Array<{ text: string; num: number; x: number }> = [];
+      itemsInColumn.forEach(it => {
+        const moneyMatch = it.text.match(/\b\d{1,3}(?:\.\d{3})*,\d{2}\b/);
+        if (moneyMatch) {
+          numberMatches.push({
+            text: moneyMatch[0],
+            num: parseBrazilianNumber(moneyMatch[0]),
+            x: it.x
+          });
+        }
+      });
+
+      if (numberMatches.length === 0) return;
+
+      let referencia = '1.00';
+      let valor = 0;
+
+      if (numberMatches.length === 1) {
+        valor = numberMatches[0].num;
+      } else if (numberMatches.length >= 2) {
+        // Left is reference (e.g. 30,00 or 20,00 or 15,00), Right is monetary value (e.g. 2.439,24)
+        numberMatches.sort((a, b) => a.x - b.x);
+        referencia = numberMatches[0].text;
+        valor = numberMatches[numberMatches.length - 1].num;
+      }
+
+      if (valor > 0) {
+        const ev: ParsedEvent = {
+          codigo: matchedVerba.code,
+          descricao: matchedVerba.defaultName,
+          tipo: 'PROVENTO',
+          referencia,
+          valor
+        };
+
+        const list = eventsByMonth.get(hdr.mes) || [];
+        const existingIdx = list.findIndex(e => e.codigo === matchedVerba.code);
+        if (existingIdx >= 0) {
+          list[existingIdx] = ev;
+        } else {
+          list.push(ev);
+        }
+        eventsByMonth.set(hdr.mes, list);
+      }
+    });
+  });
+
   const records: MonthlyRecord[] = competencias.map((comp) => {
     const [m, y] = comp.split('/').map(Number);
+    const monthEvents = eventsByMonth.get(m) || [];
+
     return {
       competencia: comp,
       ano: y,
       mes: m,
-      eventos: parsedEventsList
+      mesNome: MONTH_NAMES[m - 1] || `Mês ${m}`,
+      eventos: monthEvents
     };
   });
 

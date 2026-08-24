@@ -117,16 +117,16 @@ interface PositionedItem {
 export const parsePdfFichaFinanceira = async (file: File): Promise<ParseResult> => {
   const arrayBuffer = await file.arrayBuffer();
   const pdfDoc = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-  
+
   const allPositionedItems: PositionedItem[] = [];
   const extractedLines: string[] = [];
 
   for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
     const page = await pdfDoc.getPage(pageNum);
     const textContent = await page.getTextContent();
-    
+
     const items = textContent.items as Array<{ str: string; transform?: number[] }>;
-    
+
     const pageItems = items
       .filter(item => item.str && item.str.trim().length > 0)
       .map(item => ({
@@ -185,7 +185,7 @@ export const parsePdfFichaFinanceira = async (file: File): Promise<ParseResult> 
 function extractServerMetadata(text: string): ServerInfo {
   const matriculaMatch = text.match(/(?:Matr[íi]cula|Matr\.)\s*[:\.-]?\s*([\d\w\-]+)/i);
   const nomeMatch = text.match(/(?:Nome|Servidor|Funcion[áa]rio)\s*[:\.-]?\s*([A-Z\sÁÉÍÓÚÂÊÔÃÕÇ]{4,60})/i) ||
-                    text.match(/Ficha Financeira.*?\n\s*([A-Z\sÁÉÍÓÚÂÊÔÃÕÇ]{4,60})/i);
+    text.match(/Ficha Financeira.*?\n\s*([A-Z\sÁÉÍÓÚÂÊÔÃÕÇ]{4,60})/i);
   const cargoMatch = text.match(/(?:Cargo|Fun[çc][ãa]o)\s*[:\.-]?\s*([A-Z0-9\sÁÉÍÓÚ\-\/]{3,60})/i);
   const cpfMatch = text.match(/\b\d{3}\.\d{3}\.\d{3}\-\d{2}\b/);
   const orgaoMatch = text.match(/(Fundo Municipal de Sa[úu]de|Prefeitura Municipal de Rio Verde|FMS|FMC|Prefeitura)/i);
@@ -217,14 +217,14 @@ function extractMonthlyRecords(
   fullText: string
 ): { records: MonthlyRecord[]; competencias: string[] } {
   const anoMatch = fullText.match(/(?:Exerc[íi]cio|Ano|Compet[êe]ncia)\s*[:\.-]?\s*(\d{4})/i) ||
-                   fullText.match(/\b(202[0-9])\b/);
+    fullText.match(/\b(202[0-9])\b/);
   const anoPadrao = anoMatch ? parseInt(anoMatch[1], 10) : new Date().getFullYear();
 
   // 1. Locate Month Column Headers and their center X coordinates
   const monthHeaderPositions: Array<{ mes: number; nome: string; x: number }> = [];
 
   MONTH_NAMES.forEach((nomeMes, idx) => {
-    const headerItem = items.find(it => 
+    const headerItem = items.find(it =>
       it.text.toLowerCase() === nomeMes.toLowerCase() ||
       (nomeMes === 'Março' && it.text.toLowerCase().startsWith('mar'))
     );
@@ -281,7 +281,7 @@ function extractMonthlyRecords(
 
     // Ignore discount totals and footer totals
     if (/TOTAL\s*DE\s*DESCONTOS|TOTAL\s*DESCONTOS|TOTAL\s*DE\s*PROVENTOS|L[IÍ]QUIDO\s*A\s*RECEBER|BASE\s*DE\s*C[AÁ]LCULO/i.test(rowText)) return;
-    
+
     // Ignore difference reajuste events (3879, 3886, 3898, 3900, 678, 791, 816, 831, 842)
     if (/^\s*(?:3879|3886|3898|3900|678|791|816|831|842)\b/i.test(rowText)) return;
 
@@ -370,3 +370,6 @@ function extractMonthlyRecords(
 
   return { records, competencias };
 }
+
+export { mergePdfParseResults } from './mergePdfResults';
+

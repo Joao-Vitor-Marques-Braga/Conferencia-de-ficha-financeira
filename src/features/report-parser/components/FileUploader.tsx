@@ -1,11 +1,10 @@
 import React, { useRef, useState } from 'react';
-import { UploadCloud, FileText, Sparkles, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import { parsePdfFichaFinanceira } from '../pdfParser';
-import { getMockCentiRioVerdeData } from '../mockData';
+import { UploadCloud, CheckCircle2, AlertCircle, Loader2, Files } from 'lucide-react';
+import { parsePdfFichaFinanceira, mergePdfParseResults } from '../pdfParser';
 import type { ParseResult } from '../../../core/types';
 
 interface FileUploaderProps {
-  onDataParsed: (result: ParseResult) => void;
+  onDataParsed: (result: ParseResult, overlapNotice?: string | null) => void;
 }
 
 export const FileUploader: React.FC<FileUploaderProps> = ({ onDataParsed }) => {
@@ -13,24 +12,38 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onDataParsed }) => {
   const [dragOver, setDragOver] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [fileNames, setFileNames] = useState<string[]>([]);
 
-  const handleFile = async (file: File) => {
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
-      setErrorMsg('Por favor, selecione um arquivo em formato PDF.');
+  const handleFiles = async (files: FileList | File[]) => {
+    const pdfFiles = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
+
+    if (pdfFiles.length === 0) {
+      setErrorMsg('Por favor, selecione arquivos em formato PDF da Ficha Financeira.');
       return;
     }
 
     try {
       setParsing(true);
       setErrorMsg(null);
-      setFileName(file.name);
-      
-      const result = await parsePdfFichaFinanceira(file);
-      onDataParsed(result);
+      setFileNames(pdfFiles.map(f => f.name));
+
+      const parsedResults: ParseResult[] = [];
+      for (const file of pdfFiles) {
+        const res = await parsePdfFichaFinanceira(file);
+        parsedResults.push(res);
+      }
+
+      const { merged, overlaps } = mergePdfParseResults(parsedResults);
+
+      let overlapMsg: string | null = null;
+      if (overlaps.length > 0) {
+        overlapMsg = `Sobreposição detectada nas competências: ${overlaps.join(', ')}. Os dados foram mesclados sem duplicações.`;
+      }
+
+      onDataParsed(merged, overlapMsg);
     } catch (err: any) {
-      console.error('Erro ao ler PDF:', err);
-      setErrorMsg('Não foi possível processar o arquivo PDF. Tente carregar os dados de demonstração ou outro arquivo.');
+      console.error('Erro ao ler PDFs:', err);
+      setErrorMsg('Não foi possível processar os arquivos PDF. Verifique se os arquivos são Fichas Financeiras válidas do Sistema Centi.');
     } finally {
       setParsing(false);
     }
@@ -40,19 +53,8 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onDataParsed }) => {
     e.preventDefault();
     setDragOver(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFile(e.dataTransfer.files[0]);
+      handleFiles(e.dataTransfer.files);
     }
-  };
-
-  const handleMockClick = () => {
-    setParsing(true);
-    setErrorMsg(null);
-    setFileName('Ficha_Financeira_Centi_Rio_Verde_Demonstrativo.pdf');
-    setTimeout(() => {
-      const mockResult = getMockCentiRioVerdeData();
-      onDataParsed(mockResult);
-      setParsing(false);
-    }, 400);
   };
 
   return (
@@ -71,8 +73,9 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onDataParsed }) => {
         <input
           type="file"
           ref={fileInputRef}
-          onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+          onChange={(e) => e.target.files && e.target.files.length > 0 && handleFiles(e.target.files)}
           accept=".pdf"
+          multiple
           className="hidden"
         />
 
@@ -87,36 +90,25 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onDataParsed }) => {
 
           <div className="space-y-1.5">
             <h2 className="text-xl font-bold text-white">
-              {parsing ? 'Processando Ficha Financeira...' : 'Arraste & Solte a Ficha Financeira em PDF'}
+              {parsing ? 'Processando Fichas Financeiras...' : 'Arraste & Solte uma ou mais Fichas em PDF'}
             </h2>
             <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
-              Compatível com o layout padrão do <strong className="text-[#ead04d]">Sistema Centi</strong> da Prefeitura Municipal de Rio Verde — GO.
+              Suporta múltiplos arquivos para apurações multi-ano (ex: 2025 e 2026). Layout padrão do <strong className="text-[#ead04d]">Sistema Centi</strong>.
             </p>
           </div>
 
           {!parsing && (
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-              <span className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-bold bg-[#1b2a3f] text-slate-200 border border-[#324f72] hover:border-slate-400 transition-colors">
-                <FileText className="w-3.5 h-3.5 mr-1.5 text-[#008d50]" /> Selecionar PDF do Computador
+              <span className="inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-black bg-[#008d50] hover:bg-[#00663a] text-white shadow-xs transition-all cursor-pointer">
+                <Files className="w-4 h-4 mr-2" /> Selecionar PDF(s) do Computador
               </span>
-
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleMockClick();
-                }}
-                className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-bold bg-[#f88543] hover:bg-[#df6824] text-slate-950 shadow-xs transition-all active:scale-95 cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5 mr-1.5 text-slate-950 fill-current" />
-                Ou Carregar Exemplo Demonstrativo
-              </button>
             </div>
           )}
 
-          {fileName && !errorMsg && (
-            <div className="inline-flex items-center px-3 py-1 bg-[#008d50]/15 border border-[#008d50]/40 rounded-full text-xs font-bold text-[#008d50]">
-              <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Arquivo: {fileName}
+          {fileNames.length > 0 && !errorMsg && (
+            <div className="inline-flex flex-wrap items-center justify-center gap-1.5 px-3 py-1.5 bg-[#008d50]/15 border border-[#008d50]/40 rounded-2xl text-xs font-bold text-[#008d50]">
+              <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+              <span>{fileNames.length === 1 ? `Arquivo: ${fileNames[0]}` : `${fileNames.length} arquivos carregados: ${fileNames.join(', ')}`}</span>
             </div>
           )}
 

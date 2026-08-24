@@ -95,9 +95,9 @@ export const exportProgressionPdfReport = (
   doc.text(server.cargo || 'NÃO INFORMADO', 38, yPos + 13);
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Admissão:', 130, yPos + 13);
+  doc.text(params.portariaNumero ? 'Ato/Portaria:' : 'Admissão:', 130, yPos + 13);
   doc.setFont('helvetica', 'normal');
-  doc.text(server.admissao || 'N/A', 148, yPos + 13);
+  doc.text(params.portariaNumero || server.portariaNumero || server.admissao || 'N/A', 148, yPos + 13);
 
   // Row 3 Parameters & Period
   doc.setFont('helvetica', 'bold');
@@ -109,7 +109,10 @@ export const exportProgressionPdfReport = (
   doc.setFont('helvetica', 'bold');
   doc.text('Período:', 130, yPos + 20);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${params.mesInicial} a ${params.mesFinal} (${consolidation.diasRetroativos} dias retroat.)`, 146, yPos + 20);
+  const periodRateioText = params.modoRateio === 'DATA_EFETIVA' && params.dataEfetiva
+    ? `${params.mesInicial} a ${params.mesFinal} (Efet.: ${params.dataEfetiva})`
+    : `${params.mesInicial} a ${params.mesFinal} (${consolidation.diasRetroativos} dias ret.)`;
+  doc.text(periodRateioText, 144, yPos + 20);
 
   // 3. Section Title 1: Tabela Analítica
   yPos += 30;

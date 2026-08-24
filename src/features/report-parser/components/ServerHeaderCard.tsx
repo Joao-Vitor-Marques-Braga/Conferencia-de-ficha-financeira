@@ -7,7 +7,7 @@ interface ServerHeaderCardProps {
   parseMethod?: 'PDF' | 'MOCK';
 }
 
-export const ServerHeaderCard: React.FC<ServerHeaderCardProps> = ({ server, parseMethod }) => {
+export const ServerHeaderCard: React.FC<ServerHeaderCardProps> = ({ server }) => {
   return (
     <div className="solid-card rounded-2xl p-5 shadow-sm">
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
@@ -21,11 +21,6 @@ export const ServerHeaderCard: React.FC<ServerHeaderCardProps> = ({ server, pars
           <div>
             <div className="flex items-center space-x-2">
               <h2 className="text-xl font-black text-white tracking-tight">{server.nome}</h2>
-              {parseMethod === 'MOCK' && (
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#f88543]/20 text-[#f88543] border border-[#f88543]/40">
-                  DADOS DEMO (CENTI)
-                </span>
-              )}
             </div>
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-1.5 text-xs text-slate-300">
@@ -43,7 +38,12 @@ export const ServerHeaderCard: React.FC<ServerHeaderCardProps> = ({ server, pars
         </div>
 
         {/* Right Metadata Badges */}
-        <div className="flex items-center space-x-3 text-xs border-t lg:border-t-0 border-[#324f72]/40 pt-3 lg:pt-0 w-full lg:w-auto justify-end">
+        <div className="flex flex-wrap items-center gap-2 text-xs border-t lg:border-t-0 border-[#324f72]/40 pt-3 lg:pt-0 w-full lg:w-auto justify-end">
+          {server.portariaNumero && (
+            <div className="px-3 py-1.5 rounded-xl bg-[#ead04d]/15 border border-[#ead04d]/40 flex items-center space-x-1.5 text-[#ead04d] font-black">
+              <span>{server.portariaNumero}</span>
+            </div>
+          )}
           {server.admissao && (
             <div className="px-3 py-1.5 rounded-xl bg-[#1b2a3f] border border-[#324f72] flex items-center space-x-1.5 text-slate-200">
               <Calendar className="w-3.5 h-3.5 text-[#ead04d]" />

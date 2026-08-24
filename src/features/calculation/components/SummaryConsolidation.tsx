@@ -41,7 +41,7 @@ export const SummaryConsolidation: React.FC<SummaryConsolidationProps> = ({
 
   return (
     <div className="solid-card rounded-2xl overflow-hidden shadow-md my-8 border border-[#324f72]/50">
-      
+
       {/* Top Header Toolbar */}
       <div className="px-6 py-4 bg-[#101c2b] border-b border-[#324f72]/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center space-x-3">
@@ -70,11 +70,10 @@ export const SummaryConsolidation: React.FC<SummaryConsolidationProps> = ({
             <button
               key={num}
               onClick={() => handleApplyGlobalParcelas(num)}
-              className={`px-2.5 py-1 rounded-lg font-bold border transition-all cursor-pointer ${
-                globalParcelas === num
+              className={`px-2.5 py-1 rounded-lg font-bold border transition-all cursor-pointer ${globalParcelas === num
                   ? 'bg-[#f88543] text-slate-950 border-[#f88543]'
                   : 'bg-[#1b2a3f] text-slate-300 border-[#324f72] hover:border-slate-400'
-              }`}
+                }`}
             >
               {num}x
             </button>
@@ -86,7 +85,7 @@ export const SummaryConsolidation: React.FC<SummaryConsolidationProps> = ({
       <div className="overflow-x-auto">
         <div className="min-w-[1000px]">
           <table className="w-full text-left text-xs border-collapse">
-            
+
             {/* Top Super Headers for the 3 Blocks */}
             <thead>
               <tr>
@@ -149,74 +148,70 @@ export const SummaryConsolidation: React.FC<SummaryConsolidationProps> = ({
                 .filter((item) => item.valorTotalIntegral > 0 || item.valorTotalProporcional > 0 || item.totalGeral > 0)
                 .map((item) => {
                   const hasValue = item.valorTotalIntegral > 0 || item.valorTotalProporcional > 0;
-                  
+
                   return (
                     <tr
                       key={item.id}
                       className="transition-colors hover:bg-[#1b2a3f]/40 bg-[#0f1a27]"
                     >
-                    {/* Evento Nome */}
-                    <td className="py-2.5 px-3.5 font-bold text-white whitespace-nowrap">
-                      {item.descricao}
-                    </td>
+                      {/* Evento Nome */}
+                      <td className="py-2.5 px-3.5 font-bold text-white whitespace-nowrap">
+                        {item.descricao}
+                      </td>
 
-                    {/* Bloco 1: Valor Total Integral */}
-                    <td className={`py-2.5 px-3.5 text-right font-mono font-bold ${
-                      hasValue ? 'bg-[#008d50]/15 text-white font-extrabold' : 'text-slate-400'
-                    }`}>
-                      {formatCurrency(item.valorTotalIntegral)}
-                    </td>
+                      {/* Bloco 1: Valor Total Integral */}
+                      <td className={`py-2.5 px-3.5 text-right font-mono font-bold ${hasValue ? 'bg-[#008d50]/15 text-white font-extrabold' : 'text-slate-400'
+                        }`}>
+                        {formatCurrency(item.valorTotalIntegral)}
+                      </td>
 
-                    {/* Bloco 1: Input Parcelas */}
-                    <td className="py-2.5 px-2 text-center">
-                      <input
-                        type="number"
-                        min={1}
-                        max={120}
-                        value={item.parcelas}
-                        onChange={(e) => handleRowParcelaChange(item.id, parseInt(e.target.value, 10))}
-                        className="w-14 bg-[#0b131e] border border-[#324f72] rounded-md px-1.5 py-0.5 text-center font-mono text-xs font-bold text-white focus:border-[#f88543] focus:outline-none"
-                      />
-                    </td>
+                      {/* Bloco 1: Input Parcelas */}
+                      <td className="py-2.5 px-2 text-center">
+                        <input
+                          type="number"
+                          min={1}
+                          max={120}
+                          value={item.parcelas}
+                          onChange={(e) => handleRowParcelaChange(item.id, parseInt(e.target.value, 10))}
+                          className="w-14 bg-[#0b131e] border border-[#324f72] rounded-md px-1.5 py-0.5 text-center font-mono text-xs font-bold text-white focus:border-[#f88543] focus:outline-none"
+                        />
+                      </td>
 
-                    {/* Bloco 1: Valor da Parcela */}
-                    <td className="py-2.5 px-3.5 text-right font-mono font-bold text-slate-200 border-r border-[#324f72]/40">
-                      {formatCurrency(item.valorParcelaIntegral)}
-                    </td>
+                      {/* Bloco 1: Valor da Parcela */}
+                      <td className="py-2.5 px-3.5 text-right font-mono font-bold text-slate-200 border-r border-[#324f72]/40">
+                        {formatCurrency(item.valorParcelaIntegral)}
+                      </td>
 
-                    {/* Bloco 2: Label / Evento Proporcional */}
-                    <td className="py-2.5 px-3 text-slate-400 font-medium text-[11px] truncate max-w-[120px]">
-                      {item.descricao}
-                    </td>
+                      {/* Bloco 2: Label / Evento Proporcional */}
+                      <td className="py-2.5 px-3 text-slate-400 font-medium text-[11px] truncate max-w-[120px]">
+                        {item.descricao}
+                      </td>
 
-                    {/* Bloco 2: Valor Total Proporcional */}
-                    <td className={`py-2.5 px-3.5 text-right font-mono font-bold ${
-                      item.valorTotalProporcional > 0 ? 'bg-[#008d50]/15 text-white font-extrabold' : 'text-slate-400'
-                    }`}>
-                      {formatCurrency(item.valorTotalProporcional)}
-                    </td>
+                      {/* Bloco 2: Valor Total Proporcional */}
+                      <td className={`py-2.5 px-3.5 text-right font-mono font-bold ${item.valorTotalProporcional > 0 ? 'bg-[#008d50]/15 text-white font-extrabold' : 'text-slate-400'
+                        }`}>
+                        {formatCurrency(item.valorTotalProporcional)}
+                      </td>
 
-                    {/* Bloco 2: Valor Parcelado Proporcional */}
-                    <td className="py-2.5 px-3.5 text-right font-mono font-bold text-slate-200 border-r border-[#324f72]/40">
-                      {formatCurrency(item.valorParcelaProporcional)}
-                    </td>
+                      {/* Bloco 2: Valor Parcelado Proporcional */}
+                      <td className="py-2.5 px-3.5 text-right font-mono font-bold text-slate-200 border-r border-[#324f72]/40">
+                        {formatCurrency(item.valorParcelaProporcional)}
+                      </td>
 
-                    {/* Bloco 3: Total Geral */}
-                    <td className={`py-2.5 px-3.5 text-right font-mono font-black ${
-                      item.totalGeral > 0 ? 'text-white' : 'text-slate-400'
-                    }`}>
-                      {formatCurrency(item.totalGeral)}
-                    </td>
+                      {/* Bloco 3: Total Geral */}
+                      <td className={`py-2.5 px-3.5 text-right font-mono font-black ${item.totalGeral > 0 ? 'text-white' : 'text-slate-400'
+                        }`}>
+                        {formatCurrency(item.totalGeral)}
+                      </td>
 
-                    {/* Bloco 3: Total Geral Parcelado */}
-                    <td className={`py-2.5 px-3.5 text-right font-mono font-black ${
-                      item.totalGeralParcelado > 0 ? 'text-[#ead04d]' : 'text-slate-400'
-                    }`}>
-                      {formatCurrency(item.totalGeralParcelado)}
-                    </td>
-                  </tr>
-                );
-              })}
+                      {/* Bloco 3: Total Geral Parcelado */}
+                      <td className={`py-2.5 px-3.5 text-right font-mono font-black ${item.totalGeralParcelado > 0 ? 'text-[#ead04d]' : 'text-slate-400'
+                        }`}>
+                        {formatCurrency(item.totalGeralParcelado)}
+                      </td>
+                    </tr>
+                  );
+                })}
             </tbody>
 
             {/* Footer Summary Row (Color-Coded Bars) */}

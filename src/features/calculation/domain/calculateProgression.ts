@@ -202,33 +202,6 @@ export const calculateProgressionSummary = (
       }
     });
 
-    // 1. Calculate base differences (Salário Base + ATS + Titulação) in this month to feed Férias calculation
-    let somaDifBaseRemunMes = 0;
-    filteredEvents.forEach(ev => {
-      const isBase = ev.codigo === '50' ||
-        ev.descricao.toUpperCase().includes('SALÁRIO BASE') ||
-        ev.descricao.toUpperCase().includes('SALARIO BASE') ||
-        ev.descricao.toUpperCase() === 'BASE';
-
-      const isATS = ev.codigo === '149' ||
-        ev.descricao.toUpperCase().includes('ATS') ||
-        ev.descricao.toUpperCase().includes('TEMPO DE SERVIÇO') ||
-        ev.descricao.toUpperCase().includes('TEMPO DE SERVICO') ||
-        ev.descricao.toUpperCase().includes('ANUÊNIO') ||
-        ev.descricao.toUpperCase().includes('ANUENIO');
-
-      const isTitulacao = ev.codigo === '702' || ev.codigo === '104' ||
-        ev.descricao.toUpperCase().includes('TITULAÇÃO') ||
-        ev.descricao.toUpperCase().includes('TITULACAO') ||
-        ev.descricao.toUpperCase().includes('INCENTIVO');
-
-      if (isBase || isATS || isTitulacao) {
-        const l1 = ev.valor;
-        const l2 = roundMoney(l1 * progressionFactor);
-        somaDifBaseRemunMes = roundMoney(somaDifBaseRemunMes + roundMoney(l2 - l1));
-      }
-    });
-
     // Process regular non-unified events in this month
     filteredEvents.forEach(ev => {
       if (consumedCodes.has(ev.codigo)) return;
@@ -258,17 +231,9 @@ export const calculateProgressionSummary = (
         l2Cheia = l1Cheia; // Fixo, não reajusta
         difCheia = 0;
       } else if (isFerias) {
-        // Férias 1/3: 1/3 (ou 1/6 para 15 dias) sobre a diferença da remuneração base (Salário Base + ATS + Titulação)
-        const diasFerias = params.diasFerias || 15;
-        const divisorFerias = diasFerias === 15 ? 6 : (30 / diasFerias) * 3;
-
-        if (somaDifBaseRemunMes > 0) {
-          difCheia = roundMoney(somaDifBaseRemunMes / divisorFerias);
-          l2Cheia = roundMoney(l1Cheia + difCheia);
-        } else {
-          l2Cheia = roundMoney(l1Cheia * progressionFactor);
-          difCheia = roundMoney(l2Cheia - l1Cheia);
-        }
+        // Férias 1/3 (verba 163) é reajustada da mesma forma que qualquer outra verba: o mesmo % de progressão sobre o valor atual
+        l2Cheia = roundMoney(l1Cheia * progressionFactor);
+        difCheia = roundMoney(l2Cheia - l1Cheia);
       } else {
         l2Cheia = roundMoney(l1Cheia * progressionFactor);
         difCheia = roundMoney(l2Cheia - l1Cheia);
@@ -402,7 +367,7 @@ export const calculateProgressionSummary = (
       const l1Cheia = ev.valor;
       const l2Cheia = isInsalubridade
         ? l1Cheia
-        : (isFerias ? roundMoney(l1Cheia + (difMes / (mb.fatorProporcional || 1))) : roundMoney(l1Cheia * progressionFactor));
+        : roundMoney(l1Cheia * progressionFactor);
 
       const existing = eventAggregationMap.get(ev.codigo);
       if (existing) {
@@ -441,7 +406,7 @@ export const calculateProgressionSummary = (
       ? roundMoney(item.totalDiferenca * (1 / 3) * (1 / 12))
       : 0;
 
-    const pctAplicado = item.isSalarioBase ? params.percentualProgressao : (item.isFerias ? 33.33 : params.percentualProgressao);
+    const pctAplicado = params.percentualProgressao;
 
     rows.push({
       codigo: item.codigo,

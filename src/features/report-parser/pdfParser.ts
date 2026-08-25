@@ -21,54 +21,60 @@ interface VerbaDefinition {
   patterns: RegExp[];
 }
 
-const ALLOWED_VERBAS: VerbaDefinition[] = [
+export const ALLOWED_VERBAS: VerbaDefinition[] = [
   {
     id: '50',
     defaultName: 'BASE',
     code: '50',
-    patterns: [/^\s*50\b/i, /\b50\s*[-–]\s*SAL[AÁ]RIO/i, /(?:SAL[AÁ]RIO|VENCIMENTO)\s*BASE/i]
+    patterns: [/\b50\s*[-–]\s*SAL[AÁ]RIO/i, /(?:SAL[AÁ]RIO|VENCIMENTO)\s*BASE/i]
   },
   {
     id: '149',
     defaultName: 'ADICIONAL POR TEMPO DE SERVIÇO',
     code: '149',
-    patterns: [/^\s*149\b/i, /\b149\s*[-–]/i, /ADICIONAL\s*(?:POR\s*)?TEMPO\s*(?:DE\s*)?SERVI[CÇ]O/i, /\bATS\b/i]
+    patterns: [/\b149\s*[-–]/i, /ADICIONAL\s*(?:POR\s*)?TEMPO\s*(?:DE\s*)?SERVI[CÇ]O/i, /\bATS\b/i]
   },
   {
-    id: '104',
+    id: 'incentivo',
     defaultName: 'INCENTIVO FUNCIONAL',
-    code: '104',
-    patterns: [/^\s*104\b/i, /\b104\s*[-–]/i, /INCENTIVO\s*FUNCIONAL/i]
+    code: '708',
+    patterns: [/INCENTIVO\s*FUNCIONAL/i]
   },
   {
     id: '702',
     defaultName: 'ADIC TITULAÇÃO PROF DA (SAÚDE)',
     code: '702',
-    patterns: [/^\s*702\b/i, /\b702\s*[-–]/i, /TITULA[CÇ][AÃ]O\s*PROFIS/i, /TITULA[CÇ][AÃ]O\s*PROF/i]
+    patterns: [/\b702\s*[-–]/i, /TITULA[CÇ][AÃ]O\s*PROFIS/i, /TITULA[CÇ][AÃ]O\s*PROF/i]
   },
   {
     id: '80',
     defaultName: 'INSALUBRIDADE',
     code: '80',
-    patterns: [/^\s*80\b(?!\s*[-–]\s*DIF)/i, /\b80\s*[-–]\s*INSALUBRIDADE/i, /^INSALUBRIDADE(?!.*EXTRA)/i]
+    patterns: [/\b80\s*[-–]\s*INSALUBRIDADE/i, /^INSALUBRIDADE(?!.*EXTRA)/i]
   },
   {
     id: '163',
     defaultName: 'FÉRIAS 1/3',
     code: '163',
-    patterns: [/^\s*163\b/i, /\b163\s*[-–]/i, /1\/3\s*(?:DE\s*)?F[EÉ]RIAS/i, /F[EÉ]RIAS\s*1\/3/i]
+    patterns: [/\b163\s*[-–]/i, /1\/3\s*(?:DE\s*)?F[EÉ]RIAS/i, /F[EÉ]RIAS\s*1\/3/i]
+  },
+  {
+    id: 'periculo_he',
+    defaultName: 'ADIC. PERICULO. HORA EXTRA',
+    code: '787',
+    patterns: [/PERICULO.*HORA/i]
   },
   {
     id: '72',
     defaultName: 'HORA EXTRA',
     code: '72',
-    patterns: [/^\s*815\b/i, /\b815\s*[-–]/i, /^\s*72\b/i, /\b72\s*[-–]/i, /HORA\s*EXTRA\s*50%/i, /HORA\s*EXTRA/i]
+    patterns: [/\b815\s*[-–]/i, /\b72\s*[-–]/i, /HORA\s*EXTRA\s*50%/i, /^(?!.*PERICULO).*HORA\s*EXTRA/i]
   },
   {
     id: '85',
     defaultName: 'AD NOTURNO',
     code: '85',
-    patterns: [/^\s*85\b/i, /\b85\s*[-–]/i, /AD(?:ICIONAL)?\s*NOTURNO/i]
+    patterns: [/\b85\s*[-–]/i, /AD(?:ICIONAL)?\s*NOTURNO/i]
   },
   {
     id: 'dsr',
@@ -87,12 +93,6 @@ const ALLOWED_VERBAS: VerbaDefinition[] = [
     defaultName: 'PERICULOSIDADE',
     code: 'PERIC',
     patterns: [/PERICULOSIDADE(?!.*HORA)/i]
-  },
-  {
-    id: 'periculo_he',
-    defaultName: 'ADIC. PERICULO. HORA EXTRA',
-    code: 'PERIC_HE',
-    patterns: [/PERICULO.*HORA/i]
   },
   {
     id: 'risco',
@@ -279,18 +279,30 @@ function extractMonthlyRecords(
     rowItems.sort((a, b) => a.x - b.x);
     const rowText = rowItems.map(i => i.text).join(' ');
 
-    // Ignore discount totals and footer totals
+    // Ignore discount totals, footer totals, bank loans (consignado), taxes and generic deductions
     if (/TOTAL\s*DE\s*DESCONTOS|TOTAL\s*DESCONTOS|TOTAL\s*DE\s*PROVENTOS|L[IÍ]QUIDO\s*A\s*RECEBER|BASE\s*DE\s*C[AÁ]LCULO/i.test(rowText)) return;
+    if (/CONSIGNADO|EMPR[EÉ]STIMO|DESCONTO|IRRF|INSS|IPASGO|PENS[AÃ]O\s*ALIMENT|SINDICATO|MENSALIDADE|UNIMED|PLANO\s*DE\s*SA[UÚ]DE|VALE\s*TRANSPORTE/i.test(rowText)) return;
 
-    // Ignore difference reajuste events (3879, 3886, 3898, 3900, 678, 791, 816, 831, 842)
-    if (/^\s*(?:3879|3886|3898|3900|678|791|816|831|842)\b/i.test(rowText)) return;
+    // Ignore difference reajuste events (3879, 3886, 3898, 3900, 678, 791, 816, 831, 842, 1147, 3928) or descriptions starting with DIF / DIFERENÇA
+    if (/^\s*(?:3879|3886|3898|3900|678|791|816|831|842|1147|3928)\b/i.test(rowText)) return;
+    if (/^\s*\d+\s*[-–]\s*(?:DIF\b|DIF\.|DIFEREN)/i.test(rowText)) return;
 
     // Check if row matches an allowed verba
     const matchedVerba = ALLOWED_VERBAS.find(v => v.patterns.some(p => p.test(rowText)));
     if (!matchedVerba) return;
 
+    // Extract real numeric code if present at the start of rowText (e.g. "708 - INCENTIVO FUNCIONAL" -> "708")
+    const codeMatch = rowText.match(/^\s*(\d+)\s*[-–\s]/);
+    const eventCode = codeMatch ? codeMatch[1] : matchedVerba.code;
+
     // Separate Event Label (left items) from data columns (items near/under month columns)
     const firstMonthX = monthHeaderPositions[0]?.x || 160;
+
+    // Extract description from the left items
+    const labelItems = rowItems.filter(it => it.x < firstMonthX - 25);
+    let rowLabel = labelItems.map(i => i.text).join(' ').trim();
+    rowLabel = rowLabel.replace(/^\s*\d+\s*[-–]?\s*/, '').trim();
+    const eventDesc = rowLabel.length > 0 ? rowLabel : matchedVerba.defaultName;
 
     // Filter items that belong to table cells (x >= firstMonthX - 30)
     const cellItems = rowItems.filter(it => it.x >= firstMonthX - 25);
@@ -336,15 +348,15 @@ function extractMonthlyRecords(
 
       if (valor > 0) {
         const ev: ParsedEvent = {
-          codigo: matchedVerba.code,
-          descricao: matchedVerba.defaultName,
+          codigo: eventCode,
+          descricao: eventDesc,
           tipo: 'PROVENTO',
           referencia,
           valor
         };
 
         const list = eventsByMonth.get(hdr.mes) || [];
-        const existingIdx = list.findIndex(e => e.codigo === matchedVerba.code);
+        const existingIdx = list.findIndex(e => e.codigo === eventCode);
         if (existingIdx >= 0) {
           list[existingIdx] = ev;
         } else {

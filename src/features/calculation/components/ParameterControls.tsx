@@ -160,7 +160,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             />
             <span className="absolute right-3 top-2 text-[#f88543] font-black">%</span>
           </div>
-          <p className="text-[10px] text-slate-400">Incentivo Funcional (Verba 104)</p>
+          <p className="text-[10px] text-slate-400">Adicional de Incentivo Funcional</p>
         </div>
 
         {/* Divisor de Jornada - Color #ead04d (Yellow/Gold) */}
@@ -198,7 +198,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
       </div>
 
       {/* Row 2: Selected Months, Rateio Mode & Data Efetiva / Dias Retroativos */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 text-xs pt-2 border-t border-[#324f72]/30">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs pt-2 border-t border-[#324f72]/30">
         
         {/* Mês Inicial Dropdown */}
         <div className="space-y-1.5 bg-[#0f1a27] p-3 rounded-xl border border-[#324f72]/50">
@@ -322,45 +322,6 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
               <p className="text-[10px] text-slate-400">Proporcional fixo sobre base 30 dias</p>
             </div>
           )}
-        </div>
-
-        {/* Gozo de Férias */}
-        <div className="space-y-1.5 bg-[#0f1a27] p-3 rounded-xl border border-[#324f72]/40 flex flex-col justify-between">
-          <label className="text-slate-200 font-bold flex items-center justify-between text-xs">
-            <span className="flex items-center text-[#008d50]">
-              <Calendar className="w-3.5 h-3.5 mr-1 text-[#008d50]" /> Gozo de Férias
-            </span>
-            <span className="text-[10px] text-slate-400 font-normal">
-              {(params.diasFerias ?? 15) === 15 ? '1/6 remuneração' : '1/3 remuneração'}
-            </span>
-          </label>
-          <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-            <button
-              type="button"
-              onClick={() => onParamsChange({ ...params, diasFerias: 15 })}
-              className={`py-1.5 px-2 rounded-lg text-xs font-black transition-all cursor-pointer border ${
-                (params.diasFerias ?? 15) === 15
-                  ? 'bg-[#008d50] text-white border-[#008d50] shadow-xs'
-                  : 'bg-[#1b2a3f] text-slate-300 border-[#324f72] hover:border-slate-400'
-              }`}
-              title="15 dias de férias: 1/6 da diferença da remuneração base"
-            >
-              15 Dias (1/6)
-            </button>
-            <button
-              type="button"
-              onClick={() => onParamsChange({ ...params, diasFerias: 30 })}
-              className={`py-1.5 px-2 rounded-lg text-xs font-black transition-all cursor-pointer border ${
-                params.diasFerias === 30
-                  ? 'bg-[#008d50] text-white border-[#008d50] shadow-xs'
-                  : 'bg-[#1b2a3f] text-slate-300 border-[#324f72] hover:border-slate-400'
-              }`}
-              title="30 dias de férias: 1/3 da diferença da remuneração base"
-            >
-              30 Dias (1/3)
-            </button>
-          </div>
-          <p className="text-[10px] text-slate-400">Proporção da Verba [163] Férias</p>
         </div>
 
       </div>

@@ -137,12 +137,12 @@ export const parsePdfFichaFinanceira = async (file: File): Promise<ParseResult> 
 
     allPositionedItems.push(...pageItems);
 
-    // Group items into visual rows by Y coordinate with 4px tolerance
+    // Group items into visual rows by Y coordinate with 2px tolerance
     const rowMap = new Map<number, PositionedItem[]>();
     pageItems.forEach(item => {
       let foundKey: number | null = null;
       for (const key of rowMap.keys()) {
-        if (Math.abs(key - item.y) <= 4) {
+        if (Math.abs(key - item.y) <= 2) {
           foundKey = key;
           break;
         }
@@ -239,12 +239,12 @@ function extractMonthlyRecords(
 
   monthHeaderPositions.sort((a, b) => a.x - b.x);
 
-  // Group items into visual rows by Y coordinate
+  // Group items into visual rows by Y coordinate with 2px tolerance
   const rowMap = new Map<number, PositionedItem[]>();
   items.forEach(item => {
     let foundKey: number | null = null;
     for (const key of rowMap.keys()) {
-      if (Math.abs(key - item.y) <= 4) {
+      if (Math.abs(key - item.y) <= 2) {
         foundKey = key;
         break;
       }
@@ -283,16 +283,16 @@ function extractMonthlyRecords(
     if (/TOTAL\s*DE\s*DESCONTOS|TOTAL\s*DESCONTOS|TOTAL\s*DE\s*PROVENTOS|L[IÍ]QUIDO\s*A\s*RECEBER|BASE\s*DE\s*C[AÁ]LCULO/i.test(rowText)) return;
     if (/CONSIGNADO|EMPR[EÉ]STIMO|DESCONTO|IRRF|INSS|IPASGO|PENS[AÃ]O\s*ALIMENT|SINDICATO|MENSALIDADE|UNIMED|PLANO\s*DE\s*SA[UÚ]DE|VALE\s*TRANSPORTE/i.test(rowText)) return;
 
-    // Ignore difference reajuste events (3879, 3886, 3898, 3900, 678, 791, 816, 831, 842, 1147, 3928) or descriptions starting with DIF / DIFERENÇA
-    if (/^\s*(?:3879|3886|3898|3900|678|791|816|831|842|1147|3928)\b/i.test(rowText)) return;
-    if (/^\s*\d+\s*[-–]\s*(?:DIF\b|DIF\.|DIFEREN)/i.test(rowText)) return;
+    // Ignore difference reajuste events (3473, 3476, 3879, 3886, 3898, 3900, 678, 791, 816, 831, 842, 1147, 3928) or descriptions containing DIF / DIFERENÇA
+    if (/^\s*(?:3473|3476|3879|3886|3898|3900|678|791|816|831|842|1147|3928)\b/i.test(rowText)) return;
+    if (/\b(?:DIF\b|DIF\.|DIFEREN[CÇ]A)\b/i.test(rowText)) return;
 
     // Check if row matches an allowed verba
     const matchedVerba = ALLOWED_VERBAS.find(v => v.patterns.some(p => p.test(rowText)));
     if (!matchedVerba) return;
 
-    // Extract real numeric code if present at the start of rowText (e.g. "708 - INCENTIVO FUNCIONAL" -> "708")
-    const codeMatch = rowText.match(/^\s*(\d+)\s*[-–\s]/);
+    // Extract real numeric code from the row (e.g. "149 - ADICIONAL POR TEMPO DE SERVIÇO" -> "149")
+    const codeMatch = rowText.match(/(?:^|\s)(\d{1,4})\s*[-–]\s*/);
     const eventCode = codeMatch ? codeMatch[1] : matchedVerba.code;
 
     // Separate Event Label (left items) from data columns (items near/under month columns)
@@ -301,8 +301,9 @@ function extractMonthlyRecords(
     // Extract description from the left items
     const labelItems = rowItems.filter(it => it.x < firstMonthX - 25);
     let rowLabel = labelItems.map(i => i.text).join(' ').trim();
-    rowLabel = rowLabel.replace(/^\s*\d+\s*[-–]?\s*/, '').trim();
-    const eventDesc = rowLabel.length > 0 ? rowLabel : matchedVerba.defaultName;
+    const descMatch = rowLabel.match(/(?:^|\s)\d{1,4}\s*[-–]\s*(.+)$/);
+    const cleanDesc = descMatch ? descMatch[1].trim() : rowLabel.replace(/^\s*\d+\s*[-–]?\s*/, '').trim();
+    const eventDesc = cleanDesc.length > 0 ? cleanDesc : matchedVerba.defaultName;
 
     // Filter items that belong to table cells (x >= firstMonthX - 30)
     const cellItems = rowItems.filter(it => it.x >= firstMonthX - 25);

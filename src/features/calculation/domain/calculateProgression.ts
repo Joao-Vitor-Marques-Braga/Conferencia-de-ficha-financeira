@@ -406,7 +406,26 @@ export const calculateProgressionSummary = (
       ? roundMoney(item.totalDiferenca * (1 / 3) * (1 / 12))
       : 0;
 
-    const pctAplicado = params.percentualProgressao;
+    const isATS = item.codigo === '149' ||
+      item.descricao.toUpperCase().includes('ATS') ||
+      item.descricao.toUpperCase().includes('TEMPO DE SERVIÇO') ||
+      item.descricao.toUpperCase().includes('TEMPO DE SERVICO') ||
+      item.descricao.toUpperCase().includes('ANUÊNIO') ||
+      item.descricao.toUpperCase().includes('ANUENIO');
+
+    const isTitulacao = item.codigo === '702' || item.codigo === '708' || item.codigo === '104' ||
+      item.descricao.toUpperCase().includes('TITULAÇÃO') ||
+      item.descricao.toUpperCase().includes('TITULACAO') ||
+      item.descricao.toUpperCase().includes('INCENTIVO');
+
+    let pctAplicado = params.percentualProgressao;
+    if (isATS && params.percentualATS) {
+      pctAplicado = params.percentualATS;
+    } else if (isTitulacao && params.percentualTitulacao) {
+      pctAplicado = params.percentualTitulacao;
+    } else {
+      pctAplicado = params.percentualProgressao;
+    }
 
     rows.push({
       codigo: item.codigo,

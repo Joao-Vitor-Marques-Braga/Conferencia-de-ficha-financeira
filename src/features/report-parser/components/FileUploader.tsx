@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { UploadCloud, CheckCircle2, AlertCircle, Loader2, Files } from 'lucide-react';
 import { parsePdfFichaFinanceira, mergePdfParseResults } from '../pdfParser';
+import { parseMultiYearPdfFichaFinanceira } from '../../multi-year-retroactive';
 import type { ParseResult } from '../../../core/types';
 
 interface FileUploaderProps {
@@ -27,9 +28,13 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onDataParsed }) => {
       setErrorMsg(null);
       setFileNames(pdfFiles.map(f => f.name));
 
+      const isMultiFile = pdfFiles.length > 1;
       const parsedResults: ParseResult[] = [];
+
       for (const file of pdfFiles) {
-        const res = await parsePdfFichaFinanceira(file);
+        const res = isMultiFile
+          ? await parseMultiYearPdfFichaFinanceira(file)
+          : await parsePdfFichaFinanceira(file);
         parsedResults.push(res);
       }
 

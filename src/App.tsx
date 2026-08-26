@@ -13,6 +13,7 @@ import { HistoryDrawer } from './features/history/components/HistoryDrawer';
 import { FunctionalIncentiveView } from './features/functional-incentive/components/FunctionalIncentiveView';
 import { BatchProcessingView } from './features/batch-calculation/components/BatchProcessingView';
 import { calculateProgressionSummary } from './features/calculation/domain/calculateProgression';
+import { calculateMultiYearRetroactive } from './features/multi-year-retroactive';
 import { exportProgressionPdfReport } from './features/pdf-exporter/exportProgressionPdf';
 import { exportConsolidatedSpreadsheet, exportDetailedMonthlySpreadsheet } from './features/spreadsheet-exporter/exportSpreadsheet';
 import { storageService } from './core/services/storageService';
@@ -129,11 +130,25 @@ export function App() {
   const summary = useMemo(() => {
     if (!parseResult) return null;
 
-    const computed = calculateProgressionSummary(
-      parseResult.records,
-      params,
-      selectedCompetencias
-    );
+    // Detect if this calculation spans multiple calendar years
+    const uniqueYears = Array.from(new Set(selectedCompetencias.map(c => c.split('/')[1])));
+
+    let computed: ReturnType<typeof calculateProgressionSummary>;
+
+    if (uniqueYears.length > 1) {
+      computed = calculateMultiYearRetroactive({
+        mergedRecords: parseResult.records,
+        params,
+        selectedCompetencias,
+        serverInfo: parseResult.server
+      });
+    } else {
+      computed = calculateProgressionSummary(
+        parseResult.records,
+        params,
+        selectedCompetencias
+      );
+    }
 
     computed.server = {
       ...parseResult.server,

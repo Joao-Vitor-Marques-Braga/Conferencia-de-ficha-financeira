@@ -2,12 +2,17 @@ import React, { useState } from 'react';
 import { CalendarRange, CheckCircle2, ChevronDown, ChevronRight, Layers } from 'lucide-react';
 import { formatCurrency, formatPercent } from '../../../../core/utils/formatters';
 import type { MultiYearConsolidatedSummary } from '../../domain/types';
+import { MonthlyBreakdownAccordion } from '../../../calculation/components/MonthlyBreakdownAccordion';
 
 interface MultiYearRetroactiveViewProps {
   summary: MultiYearConsolidatedSummary;
+  onMonthPercentChange?: (competencia: string, newPercent: number) => void;
 }
 
-export const MultiYearRetroactiveView: React.FC<MultiYearRetroactiveViewProps> = ({ summary }) => {
+export const MultiYearRetroactiveView: React.FC<MultiYearRetroactiveViewProps> = ({
+  summary,
+  onMonthPercentChange
+}) => {
   const [activeTab, setActiveTab] = useState<'CONSOLIDADO' | 'ANOS'>('CONSOLIDADO');
   const [expandedYears, setExpandedYears] = useState<Record<number, boolean>>({});
 
@@ -282,6 +287,14 @@ export const MultiYearRetroactiveView: React.FC<MultiYearRetroactiveViewProps> =
                           ))}
                         </tbody>
                       </table>
+                    </div>
+
+                    {/* Monthly Breakdown Accordion for this year with editable month percent */}
+                    <div className="pt-2">
+                      <MonthlyBreakdownAccordion
+                        yearlyBreakdown={entry.summary.yearlyBreakdown}
+                        onMonthPercentChange={onMonthPercentChange}
+                      />
                     </div>
                   </div>
                 )}

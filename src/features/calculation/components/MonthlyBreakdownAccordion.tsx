@@ -5,10 +5,12 @@ import { ChevronDown, ChevronUp, Calendar, Clock } from 'lucide-react';
 
 interface MonthlyBreakdownAccordionProps {
   yearlyBreakdown: YearlyBreakdownGroup[];
+  onMonthPercentChange?: (competencia: string, newPercent: number) => void;
 }
 
 export const MonthlyBreakdownAccordion: React.FC<MonthlyBreakdownAccordionProps> = ({
-  yearlyBreakdown
+  yearlyBreakdown,
+  onMonthPercentChange
 }) => {
   // All years expanded by default
   const [expandedYears, setExpandedYears] = useState<Record<number, boolean>>(() => {
@@ -42,7 +44,7 @@ export const MonthlyBreakdownAccordion: React.FC<MonthlyBreakdownAccordionProps>
           <div>
             <h3 className="text-base font-extrabold text-white">Detalhamento Hierárquico Mensal (Ano &gt; Mês)</h3>
             <p className="text-xs text-slate-400 font-medium">
-              Rateio proporcional exato dia a dia por competência do calendário real
+              Rateio proporcional exato dia a dia por competência do calendário real com ajuste individual de % por mês
             </p>
           </div>
         </div>
@@ -117,11 +119,34 @@ export const MonthlyBreakdownAccordion: React.FC<MonthlyBreakdownAccordionProps>
                             onClick={() => toggleMonth(month.competencia)}
                             className="px-4 py-2.5 bg-[#17263a] hover:bg-[#1c2e47] flex flex-col sm:flex-row sm:items-center justify-between gap-2 cursor-pointer select-none transition-colors"
                           >
-                            <div className="flex items-center space-x-3">
+                            <div className="flex flex-wrap items-center gap-2.5">
                               <span className="px-2 py-0.5 rounded bg-[#1b2a3f] border border-[#324f72] font-mono font-black text-white text-xs">
                                 {month.competencia}
                               </span>
                               <strong className="text-white text-xs font-bold">{month.mesNome}</strong>
+
+                              {/* Editable Month-Specific Progression Percentage */}
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-[#0b131e] border border-[#324f72] shadow-xs"
+                                title={`Alterar percentual de progressão de ${month.mesNome}/${month.ano}`}
+                              >
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  max="100"
+                                  value={month.percentualReajuste ?? 5}
+                                  onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    if (!isNaN(val) && onMonthPercentChange) {
+                                      onMonthPercentChange(month.competencia, val);
+                                    }
+                                  }}
+                                  className="w-14 bg-transparent text-right font-mono font-black text-[#ead04d] focus:outline-none focus:ring-1 focus:ring-[#ead04d] rounded px-0.5 text-xs"
+                                />
+                                <span className="text-xs text-[#ead04d] font-black">%</span>
+                              </div>
 
                               {month.situacaoFuncional && (
                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#ead04d]/20 text-[#ead04d] border border-[#ead04d]/40">

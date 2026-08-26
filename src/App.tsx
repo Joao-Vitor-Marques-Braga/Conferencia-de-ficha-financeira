@@ -217,6 +217,16 @@ export function App() {
     setDeletedRowCodes([]);
   };
 
+  const handleMonthPercentChange = (competencia: string, newPercent: number) => {
+    setParams(prev => ({
+      ...prev,
+      percentuaisPorMes: {
+        ...(prev.percentuaisPorMes || {}),
+        [competencia]: newPercent
+      }
+    }));
+  };
+
   // Save active calculation into localStorage
   const handleSaveCalculation = useCallback(() => {
     if (!summary || !parseResult) {
@@ -554,6 +564,7 @@ export function App() {
                 {summary && activeViewMode === 'HIERARQUICA' && (
                   <MonthlyBreakdownAccordion
                     yearlyBreakdown={summary.yearlyBreakdown}
+                    onMonthPercentChange={handleMonthPercentChange}
                   />
                 )}
 

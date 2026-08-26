@@ -49,6 +49,7 @@ export interface ProgressionParams {
   portariaNumero?: string;
   selectedVerbaCodes?: string[];
   unifiedVerbas?: UnifiedVerbaGroup[];
+  percentuaisPorMes?: Record<string, number>; // Ex: { "05/2025": 5.0, "06/2026": 6.12 }
 }
 
 export interface MonthlyBreakdownDetail {
@@ -62,6 +63,7 @@ export interface MonthlyBreakdownDetail {
   diasDevidos: number;
   fatorProporcional: number; // Ex: 0.5484 (17/31) ou 1.0 (30/30)
   percentualAplicado: number; // Ex: 54.84% ou 100%
+  percentualReajuste?: number; // Percentual de progressão aplicado a este mês (ex: 5% ou 6.12%)
   eventos: Array<{
     codigo: string;
     descricao: string;

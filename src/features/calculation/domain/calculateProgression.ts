@@ -164,6 +164,11 @@ export const calculateProgressionSummary = (
   const monthlyBreakdown: MonthlyBreakdownDetail[] = activeRecords.map((rec, idx) => {
     const mp = monthProportions[idx];
 
+    const monthPct = (params.percentuaisPorMes && typeof params.percentuaisPorMes[rec.competencia] === 'number')
+      ? params.percentuaisPorMes[rec.competencia]
+      : params.percentualProgressao;
+    const monthProgressionFactor = 1 + (monthPct / 100);
+
     // Filter events of this month by selectedVerbaCodes
     const filteredEvents = rec.eventos.filter(ev =>
       !selectedCodes || selectedCodes.length === 0 || selectedCodes.includes(ev.codigo)
@@ -178,7 +183,7 @@ export const calculateProgressionSummary = (
       if (matching.length > 0) {
         matching.forEach(ev => consumedCodes.add(ev.codigo));
         const l1Cheia = roundMoney(matching.reduce((sum, ev) => sum + ev.valor, 0));
-        const l2Cheia = roundMoney(l1Cheia * progressionFactor);
+        const l2Cheia = roundMoney(l1Cheia * monthProgressionFactor);
         const difCheia = roundMoney(l2Cheia - l1Cheia);
 
         const l1Aplicada = roundMoney(l1Cheia * mp.fator);
@@ -225,17 +230,17 @@ export const calculateProgressionSummary = (
       let difCheia = 0;
 
       if (isSalarioBase) {
-        l2Cheia = roundMoney(l1Cheia * progressionFactor);
+        l2Cheia = roundMoney(l1Cheia * monthProgressionFactor);
         difCheia = roundMoney(l2Cheia - l1Cheia);
       } else if (isInsalubridade) {
         l2Cheia = l1Cheia; // Fixo, não reajusta
         difCheia = 0;
       } else if (isFerias) {
         // Férias 1/3 (verba 163) é reajustada da mesma forma que qualquer outra verba: o mesmo % de progressão sobre o valor atual
-        l2Cheia = roundMoney(l1Cheia * progressionFactor);
+        l2Cheia = roundMoney(l1Cheia * monthProgressionFactor);
         difCheia = roundMoney(l2Cheia - l1Cheia);
       } else {
-        l2Cheia = roundMoney(l1Cheia * progressionFactor);
+        l2Cheia = roundMoney(l1Cheia * monthProgressionFactor);
         difCheia = roundMoney(l2Cheia - l1Cheia);
       }
 
@@ -275,6 +280,7 @@ export const calculateProgressionSummary = (
       diasDevidos: mp.diasDevidos,
       fatorProporcional: mp.fator,
       percentualAplicado: roundMoney(mp.fator * 100),
+      percentualReajuste: monthPct,
       eventos: monthEventList.map(e => ({
         codigo: e.codigo,
         descricao: e.descricao,

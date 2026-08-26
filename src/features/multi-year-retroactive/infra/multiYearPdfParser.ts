@@ -181,7 +181,7 @@ function extractMonthlyRecords(
 
       // Ignore discount totals, footer totals, bank loans (consignado), taxes, adiantamentos, iparv/ipasgo and generic deductions
       if (/TOTAL\s*DE\s*DESCONTOS|TOTAL\s*DESCONTOS|TOTAL\s*DE\s*PROVENTOS|L[IÍ]QUIDO\s*A\s*RECEBER|BASE\s*DE\s*C[AÁ]LCULO/i.test(rowText)) return;
-      if (/IPARV|IPASGO|INSS|IRRF|CONSIGNADO|EMPR[EÉ]STIMO|DESCONTO|PENS[AÃ]O\s*ALIMENT|SINDICATO|MENSALIDADE|UNIMED|PLANO\s*DE\s*SA[UÚ]DE|VALE\s*TRANSPORTE|ADIANTAMENTO|SINDIVERDE|PLANO ODONTO|MULTA DE TRANSITO|INDENIZACAO LICENCA PREMIO/i.test(rowText)) return;
+      if (/IPARV|IPASGO|INSS|IRRF|CONSIGNADO|EMPR[EÉ]STIMO|DESCONTO|PENS[AÃ]O\s*ALIMENT|SINDICATO|MENSALIDADE|UNIMED|PLANO\s*DE\s*SA[UÚ]DE|VALE\s*TRANSPORTE|ADIANTAMENTO|SINDIVERDE|PLANO ODONTO|MULTA DE TRANSITO|INDENIZACAO LICENCA PREMIO  /i.test(rowText)) return;
       if (/\bFALTA\b|\bFALTAS\b/i.test(rowText)) return;
 
       // Ignore Função Gratificada / Cargo em Comissão (FG, FC, etc.) - not subject to career letter progression

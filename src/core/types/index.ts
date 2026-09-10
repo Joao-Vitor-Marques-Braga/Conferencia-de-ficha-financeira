@@ -24,6 +24,8 @@ export interface ParsedEvent {
   tipo: 'PROVENTO' | 'DESCONTO';
   referencia: string; // Ex: "30.00", "15%", "200h"
   valor: number; // Valor original na Letra 1
+  defaultIgnored?: boolean;
+  categoria?: 'CARREIRA' | 'FG_COMISSAO' | 'ABONO_PERMANENCIA' | 'DESCONTO' | 'OUTROS';
 }
 
 export interface UnifiedVerbaGroup {
@@ -34,10 +36,12 @@ export interface UnifiedVerbaGroup {
 
 export interface ProgressionParams {
   percentualProgressao: number; // Ex: 6.12 (%)
-  percentualATS: number; // Ex: 15 (%) ou do cadastro
-  percentualTitulacao: number; // Ex: 20 (%)
-  percentualRiscoInsalubridade: number; // Ex: 20 ou 30 (%)
-  divisorJornada: 150 | 200 | 220; // 150h, 200h ou 220h
+  letraOrigem?: string; // Letra atual de onde sai (ex: "E", "A")
+  letraDestino?: string; // Nova letra para onde vai (ex: "F", "B")
+  percentualATS?: number; // Opcional / legado
+  percentualTitulacao?: number; // Opcional / legado
+  percentualRiscoInsalubridade?: number; // Ex: 20 ou 30 (%)
+  divisorJornada?: 150 | 200 | 220; // Opcional / legado
   mesInicial: string; // Ex: "01/2026"
   mesFinal: string; // Ex: "08/2026"
   modoRateio: 'DATA_EFETIVA' | 'DIAS_MANUAIS';

@@ -8,7 +8,7 @@ import { SummaryMetricsCards } from './features/calculation/components/SummaryMe
 import { ProgressionTable } from './features/summary-view/components/ProgressionTable';
 import { MonthlyBreakdownAccordion } from './features/calculation/components/MonthlyBreakdownAccordion';
 import { SummaryConsolidation } from './features/calculation/components/SummaryConsolidation';
-import { VerbaSelectorModal } from './features/calculation/components/VerbaSelectorModal';
+import { VerbaSelectorModal, type VerbaItem } from './features/calculation/components/VerbaSelectorModal';
 import { HistoryDrawer } from './features/history/components/HistoryDrawer';
 import { FunctionalIncentiveView } from './features/functional-incentive/components/FunctionalIncentiveView';
 import { BatchProcessingView } from './features/batch-calculation/components/BatchProcessingView';
@@ -19,7 +19,7 @@ import { exportConsolidatedSpreadsheet, exportDetailedMonthlySpreadsheet } from 
 import { storageService } from './core/services/storageService';
 import { roundMoney } from './core/utils/math';
 import type { ParseResult, ProgressionParams, CalculatedEventRow, SavedCalculation, UnifiedVerbaGroup } from './core/types';
-import { Download, FileCheck, ShieldCheck, Save, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
+import { Download, FileCheck, ShieldCheck, Save, FileSpreadsheet, CheckCircle2, Filter } from 'lucide-react';
 
 export function App() {
   // Navigation tabs: 'PROGRESSAO' | 'INCENTIVO' | 'MASSA'
@@ -38,13 +38,11 @@ export function App() {
   // Calculation parameters default state
   const [params, setParams] = useState<ProgressionParams>({
     percentualProgressao: 6.12,
-    percentualATS: 15,
-    percentualTitulacao: 20,
-    percentualRiscoInsalubridade: 20,
-    divisorJornada: 200,
+    letraOrigem: 'E',
+    letraDestino: 'F',
     mesInicial: '01/2026',
     mesFinal: '08/2026',
-    modoRateio: 'DATA_EFETIVA',
+    modoRateio: 'DIAS_MANUAIS',
     dataEfetiva: '2026-01-14',
     diasRetroativos: 30,
     diasFerias: 15,
@@ -74,14 +72,20 @@ export function App() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Collect all unique verbas present in the parsed records
-  const allAvailableVerbas = useMemo(() => {
+  // Collect all unique verbas present in the parsed records with classification
+  const allAvailableVerbas: VerbaItem[] = useMemo(() => {
     if (!parseResult) return [];
-    const map = new Map<string, { codigo: string; descricao: string }>();
+    const map = new Map<string, VerbaItem>();
     parseResult.records.forEach(rec => {
       rec.eventos.forEach(ev => {
         if (!map.has(ev.codigo)) {
-          map.set(ev.codigo, { codigo: ev.codigo, descricao: ev.descricao });
+          map.set(ev.codigo, {
+            codigo: ev.codigo,
+            descricao: ev.descricao,
+            defaultIgnored: ev.defaultIgnored,
+            categoria: ev.categoria,
+            tipo: ev.tipo
+          });
         }
       });
     });
@@ -89,19 +93,36 @@ export function App() {
   }, [parseResult]);
 
   // Handler when PDF or Mock is loaded
-  const handleDataParsed = (result: ParseResult) => {
+  const handleDataParsed = (result: ParseResult, overlapNotice?: string | null) => {
     setParseResult(result);
     setRowOverrides({});
     setDeletedRowCodes([]);
 
-    const availableCodes: string[] = [];
-    const map = new Map<string, string>();
+    // Extract all verba items and determine initial recommended selection
+    const verbasMap = new Map<string, VerbaItem>();
     result.records.forEach(rec => {
-      rec.eventos.forEach(ev => map.set(ev.codigo, ev.descricao));
+      rec.eventos.forEach(ev => {
+        if (!verbasMap.has(ev.codigo)) {
+          verbasMap.set(ev.codigo, {
+            codigo: ev.codigo,
+            descricao: ev.descricao,
+            defaultIgnored: ev.defaultIgnored,
+            categoria: ev.categoria,
+            tipo: ev.tipo
+          });
+        }
+      });
     });
-    for (const code of map.keys()) {
-      availableCodes.push(code);
-    }
+
+    // Default selection: only the ones that were NOT default-ignored (standard career verbas)
+    const recommendedCodes = Array.from(verbasMap.values())
+      .filter(v => !v.defaultIgnored)
+      .map(v => v.codigo);
+
+    // Fallback: if all were flagged as ignored, keep at least base 50 or all
+    const initialSelectedCodes = recommendedCodes.length > 0
+      ? recommendedCodes
+      : (verbasMap.has('50') ? ['50'] : Array.from(verbasMap.keys()));
 
     if (result.competencias.length > 0) {
       const initComp = result.competencias[0];
@@ -111,10 +132,17 @@ export function App() {
         mesInicial: initComp,
         mesFinal: endComp,
         diasRetroativos: 30,
-        selectedVerbaCodes: availableCodes
+        selectedVerbaCodes: initialSelectedCodes
       }));
       setSelectedCompetencias(result.competencias);
     }
+
+    if (overlapNotice) {
+      showToast(overlapNotice, 'info');
+    }
+
+    // Automatically open the selection modal right after loading the financial sheets
+    setIsVerbaSelectorOpen(true);
   };
 
   const handleReset = () => {
@@ -319,8 +347,8 @@ export function App() {
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 animate-bounce">
           <div className={`px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 border font-bold text-xs ${toastMessage.type === 'success'
-              ? 'bg-[#008d50] text-white border-[#008d50]'
-              : 'bg-[#1b2a3f] text-[#ead04d] border-[#324f72]'
+            ? 'bg-[#008d50] text-white border-[#008d50]'
+            : 'bg-[#1b2a3f] text-[#ead04d] border-[#324f72]'
             }`}>
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{toastMessage.text}</span>
@@ -377,7 +405,7 @@ export function App() {
                   </h2>
 
                   <p className="text-sm text-slate-300 leading-relaxed max-w-2xl mx-auto font-medium">
-                    Carregue a Ficha Financeira em PDF do servidor para apurar automaticamente as diferenças salariais acumuladas entre a Letra Atual (Letra 1) e a Letra com Progressão (Letra 2), incluindo rateio por data efetiva e quadro de parcelamento.
+                    Carregue a Ficha Financeira em PDF do servidor para apurar automaticamente as diferenças salariais acumuladas entre a Letra Atual e a Letra com Progressão, incluindo rateio por data efetiva e quadro de parcelamento.
                   </p>
                 </div>
 
@@ -403,9 +431,9 @@ export function App() {
                       <FileCheck className="w-5 h-5 text-[#008d50]" />
                     </div>
                     <div>
-                      <h4 className="font-extrabold text-white">Rateio por Data Efetiva</h4>
+                      <h4 className="font-extrabold text-white">Rateio por Quantidade de Dias</h4>
                       <p className="text-slate-400 text-[11px] mt-0.5 leading-normal font-medium">
-                        Cálculo proporcional exato dia a dia pelo calendário real da portaria.
+                        Cálculo proporcional flexível por quantidade de dias sobre base de 30 dias.
                       </p>
                     </div>
                   </div>
@@ -436,6 +464,19 @@ export function App() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
+                    {/* Selecionar Rubricas Modal Button */}
+                    <button
+                      onClick={() => setIsVerbaSelectorOpen(true)}
+                      className="inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-black bg-[#132030] hover:bg-[#1b2a3f] text-white border border-[#008d50]/50 shadow-xs transition-all active:scale-95 cursor-pointer"
+                      title="Alterar ou revisar as rubricas e eventos incluídos no cálculo"
+                    >
+                      <Filter className="w-4 h-4 mr-1.5 text-[#008d50]" />
+                      Rubricas no Cálculo
+                      <span className="ml-1.5 px-2 py-0.5 rounded-full bg-[#008d50]/20 text-[#008d50] text-[10px] font-black border border-[#008d50]/40">
+                        {params.selectedVerbaCodes ? params.selectedVerbaCodes.length : allAvailableVerbas.length}/{allAvailableVerbas.length}
+                      </span>
+                    </button>
+
                     {/* Save Button with Ctrl+S badge */}
                     <button
                       onClick={handleSaveCalculation}
@@ -496,13 +537,11 @@ export function App() {
                   onResetParams={() => {
                     setParams({
                       percentualProgressao: 6.12,
-                      percentualATS: 15,
-                      percentualTitulacao: 20,
-                      percentualRiscoInsalubridade: 20,
-                      divisorJornada: 200,
+                      letraOrigem: 'E',
+                      letraDestino: 'F',
                       mesInicial: parseResult.competencias[0] || '01/2026',
                       mesFinal: parseResult.competencias[parseResult.competencias.length - 1] || '08/2026',
-                      modoRateio: 'DATA_EFETIVA',
+                      modoRateio: 'DIAS_MANUAIS',
                       dataEfetiva: '2026-01-14',
                       diasRetroativos: 30,
                       diasFerias: 15,
@@ -527,8 +566,8 @@ export function App() {
                     <button
                       onClick={() => setActiveViewMode('ANALITICA')}
                       className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${activeViewMode === 'ANALITICA'
-                          ? 'bg-[#324f72] text-white shadow-xs'
-                          : 'text-slate-400 hover:text-white'
+                        ? 'bg-[#324f72] text-white shadow-xs'
+                        : 'text-slate-400 hover:text-white'
                         }`}
                     >
                       Demonstrativo Analítico (Por Verba)
@@ -536,8 +575,8 @@ export function App() {
                     <button
                       onClick={() => setActiveViewMode('HIERARQUICA')}
                       className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${activeViewMode === 'HIERARQUICA'
-                          ? 'bg-[#324f72] text-white shadow-xs'
-                          : 'text-slate-400 hover:text-white'
+                        ? 'bg-[#324f72] text-white shadow-xs'
+                        : 'text-slate-400 hover:text-white'
                         }`}
                     >
                       Detalhamento por Ano &gt; Mês (Acordeão)

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ProgressionParams } from '../../../core/types';
-import { Settings, Percent, Calendar, Clock, RefreshCw, CalendarDays, Filter, ScrollText } from 'lucide-react';
+import { Settings, Percent, Calendar, RefreshCw, CalendarDays, Filter, ScrollText, Award, Tag } from 'lucide-react';
 import { formatCompetenciaLabel } from '../../../core/utils/formatters';
 
 interface ParameterControlsProps {
@@ -59,7 +59,6 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
     onCompetenciasChange(newSelected);
   };
 
-  const isDataEfetivaMode = params.modoRateio === 'DATA_EFETIVA';
 
   return (
     <div className="solid-card rounded-2xl p-5 space-y-4 shadow-sm">
@@ -106,8 +105,8 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
         </div>
       </div>
 
-      {/* Row 1: Legal percentages & Hours divisor & Portaria/Decreto */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 text-xs">
+      {/* Row 1: Legal percentage, Letter transition (Origin -> Destination), and Portaria/Decreto */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 text-xs">
         
         {/* Progression % - Color #008d50 (Green) */}
         <div className="space-y-1.5 bg-[#0f1a27] p-3 rounded-xl border border-[#008d50]/30">
@@ -124,64 +123,47 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             />
             <span className="absolute right-3 top-2 text-[#008d50] font-black">%</span>
           </div>
-          <p className="text-[10px] text-slate-400">Reajuste de nível (Letra 1 → Letra 2)</p>
+          <p className="text-[10px] text-slate-400">Reajuste de nível ({params.letraOrigem || 'Letra 1'} → {params.letraDestino || 'Letra 2'})</p>
         </div>
 
-        {/* ATS % - Color #324f72 (Navy Blue) */}
+        {/* Letra Atual (Sai de) - Color #324f72 (Blue) */}
         <div className="space-y-1.5 bg-[#0f1a27] p-3 rounded-xl border border-[#324f72]/60">
           <label className="text-slate-200 font-bold flex items-center">
-            <Percent className="w-3.5 h-3.5 mr-1 text-[#446995]" /> % ATS (Anuênio)
+            <Tag className="w-3.5 h-3.5 mr-1 text-[#446995]" /> Letra Atual (Sai de)
           </label>
           <div className="relative">
             <input
-              type="number"
-              step="0.5"
-              value={params.percentualATS}
-              onChange={(e) => onParamsChange({ ...params, percentualATS: parseFloat(e.target.value) || 0 })}
-              className="w-full bg-[#0b131e] border border-[#324f72] rounded-lg px-3 py-1.5 text-white font-extrabold focus:outline-none focus:border-[#446995] text-sm"
+              type="text"
+              maxLength={6}
+              placeholder="Ex: E"
+              value={params.letraOrigem || ''}
+              onChange={(e) => onParamsChange({ ...params, letraOrigem: e.target.value.toUpperCase() })}
+              className="w-full bg-[#0b131e] border border-[#324f72] rounded-lg px-3 py-1.5 text-white font-black uppercase text-center focus:outline-none focus:border-[#446995] text-sm tracking-wider"
             />
-            <span className="absolute right-3 top-2 text-[#446995] font-black">%</span>
           </div>
-          <p className="text-[10px] text-slate-400">Tempo de Serviço (Verba 149)</p>
+          <p className="text-[10px] text-slate-400">Nível / Letra anterior da carreira</p>
         </div>
 
-        {/* Titulacao / Incentivo % - Color #f88543 (Orange) */}
+        {/* Nova Letra (Vai para) - Color #f88543 (Orange) */}
         <div className="space-y-1.5 bg-[#0f1a27] p-3 rounded-xl border border-[#f88543]/40">
           <label className="text-slate-200 font-bold flex items-center">
-            <Percent className="w-3.5 h-3.5 mr-1 text-[#f88543]" /> % Titulação / Inc.
+            <Award className="w-3.5 h-3.5 mr-1 text-[#f88543]" /> Nova Letra (Vai para)
           </label>
           <div className="relative">
             <input
-              type="number"
-              step="0.5"
-              value={params.percentualTitulacao}
-              onChange={(e) => onParamsChange({ ...params, percentualTitulacao: parseFloat(e.target.value) || 0 })}
-              className="w-full bg-[#0b131e] border border-[#f88543]/50 rounded-lg px-3 py-1.5 text-white font-extrabold focus:outline-none focus:border-[#f88543] text-sm"
+              type="text"
+              maxLength={6}
+              placeholder="Ex: F"
+              value={params.letraDestino || ''}
+              onChange={(e) => onParamsChange({ ...params, letraDestino: e.target.value.toUpperCase() })}
+              className="w-full bg-[#0b131e] border border-[#f88543]/50 rounded-lg px-3 py-1.5 text-white font-black uppercase text-center focus:outline-none focus:border-[#f88543] text-sm tracking-wider"
             />
-            <span className="absolute right-3 top-2 text-[#f88543] font-black">%</span>
           </div>
-          <p className="text-[10px] text-slate-400">Adicional de Incentivo Funcional</p>
-        </div>
-
-        {/* Divisor de Jornada - Color #ead04d (Yellow/Gold) */}
-        <div className="space-y-1.5 bg-[#0f1a27] p-3 rounded-xl border border-[#ead04d]/40">
-          <label className="text-slate-200 font-bold flex items-center">
-            <Clock className="w-3.5 h-3.5 mr-1 text-[#ead04d]" /> Divisor de Carga
-          </label>
-          <select
-            value={params.divisorJornada}
-            onChange={(e) => onParamsChange({ ...params, divisorJornada: parseInt(e.target.value, 10) as 150 | 200 | 220 })}
-            className="w-full bg-[#0b131e] border border-[#ead04d]/50 rounded-lg px-3 py-1.5 text-white font-extrabold focus:outline-none focus:border-[#ead04d] text-sm"
-          >
-            <option value={150}>150 Horas (30h/s)</option>
-            <option value={200}>200 Horas (40h/s)</option>
-            <option value={220}>220 Horas (44h/s)</option>
-          </select>
-          <p className="text-[10px] text-slate-400">Base Horas Extras / Noturno</p>
+          <p className="text-[10px] text-slate-400">Nível / Letra promovida</p>
         </div>
 
         {/* Portaria / Decreto - Input (Requirement 3) */}
-        <div className="space-y-1.5 bg-[#0f1a27] p-3 rounded-xl border border-[#324f72]/60">
+        <div className="space-y-1.5 bg-[#0f1a27] p-3 rounded-xl border border-[#ead04d]/40">
           <label className="text-slate-200 font-bold flex items-center">
             <ScrollText className="w-3.5 h-3.5 mr-1 text-[#ead04d]" /> Portaria / Decreto
           </label>
@@ -261,67 +243,27 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
           <p className="text-[10px] text-slate-400">Término da apuração na ficha</p>
         </div>
 
-        {/* Rateio Automático por Data Efetiva vs Manual (Requirement 2) */}
+        {/* Rateio de Dias Retroativos (Mês 1) */}
         <div className="space-y-1.5 bg-[#0f1a27] p-3 rounded-xl border border-[#f88543]/40">
-          <div className="flex items-center justify-between">
-            <label className="text-slate-200 font-bold flex items-center text-[#f88543]">
-              <CalendarDays className="w-3.5 h-3.5 mr-1 text-[#f88543]" /> Rateio de Dias
-            </label>
-            <div className="flex items-center space-x-1">
-              <button
-                type="button"
-                onClick={() => onParamsChange({ ...params, modoRateio: 'DATA_EFETIVA' })}
-                className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold transition-all cursor-pointer ${
-                  isDataEfetivaMode
-                    ? 'bg-[#f88543] text-slate-950'
-                    : 'bg-[#1b2a3f] text-slate-400 hover:text-white'
-                }`}
-              >
-                Data Efetiva
-              </button>
-              <button
-                type="button"
-                onClick={() => onParamsChange({ ...params, modoRateio: 'DIAS_MANUAIS' })}
-                className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold transition-all cursor-pointer ${
-                  !isDataEfetivaMode
-                    ? 'bg-[#f88543] text-slate-950'
-                    : 'bg-[#1b2a3f] text-slate-400 hover:text-white'
-                }`}
-              >
-                Manual
-              </button>
-            </div>
+          <label className="text-slate-200 font-bold flex items-center text-[#f88543]">
+            <CalendarDays className="w-3.5 h-3.5 mr-1 text-[#f88543]" /> Rateio de Dias (Mês 1)
+          </label>
+          <div className="relative">
+            <input
+              type="number"
+              min={1}
+              max={30}
+              value={params.diasRetroativos ?? 30}
+              onChange={(e) => onParamsChange({
+                ...params,
+                modoRateio: 'DIAS_MANUAIS',
+                diasRetroativos: Math.min(30, Math.max(1, parseInt(e.target.value, 10) || 1))
+              })}
+              className="w-full bg-[#0b131e] border border-[#f88543]/50 rounded-lg px-3 py-1.5 text-white font-extrabold focus:outline-none focus:border-[#f88543] text-sm"
+            />
+            <span className="absolute right-3 top-1.5 text-slate-400 font-bold text-xs">dias (mês inicial)</span>
           </div>
-
-          {isDataEfetivaMode ? (
-            <div className="space-y-1">
-              <input
-                type="date"
-                value={params.dataEfetiva || '2026-01-14'}
-                onChange={(e) => onParamsChange({ ...params, dataEfetiva: e.target.value })}
-                className="w-full bg-[#0b131e] border border-[#f88543]/50 rounded-lg px-2.5 py-1.5 text-white font-bold focus:outline-none focus:border-[#f88543] text-xs"
-              />
-              <p className="text-[10px] text-slate-400">Rateio proporcional exato pelo calendário real</p>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              <div className="relative">
-                <input
-                  type="number"
-                  min={1}
-                  max={30}
-                  value={params.diasRetroativos ?? 30}
-                  onChange={(e) => onParamsChange({
-                    ...params,
-                    diasRetroativos: Math.min(30, Math.max(1, parseInt(e.target.value, 10) || 1))
-                  })}
-                  className="w-full bg-[#0b131e] border border-[#f88543]/50 rounded-lg px-3 py-1.5 text-white font-extrabold focus:outline-none focus:border-[#f88543] text-xs"
-                />
-                <span className="absolute right-3 top-1.5 text-slate-400 font-bold text-[11px]">dias (mês 1)</span>
-              </div>
-              <p className="text-[10px] text-slate-400">Proporcional fixo sobre base 30 dias</p>
-            </div>
-          )}
+          <p className="text-[10px] text-slate-400">Proporcional fixo sobre base de 30 dias (ex: 30 = integral)</p>
         </div>
 
       </div>

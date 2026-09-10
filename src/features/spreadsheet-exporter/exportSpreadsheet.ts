@@ -47,10 +47,10 @@ export const exportConsolidatedSpreadsheet = (
     ['Período Apurado', `${params.mesInicial} a ${params.mesFinal}`],
     ['Modo de Rateio', params.modoRateio === 'DATA_EFETIVA' ? `Data Efetiva: ${params.dataEfetiva}` : `Dias Manuais: ${params.diasRetroativos} dias`],
     ['% Progressão', formatPercent(params.percentualProgressao)],
-    ['% ATS', formatPercent(params.percentualATS)],
+    ['Evolução de Nível', params.letraOrigem && params.letraDestino ? `Letra ${params.letraOrigem} → Letra ${params.letraDestino}` : 'Letra 1 → Letra 2'],
     [''],
     ['DEMONSTRATIVO ANALÍTICO DE DIFERENÇAS SALARIAIS'],
-    ['Código', 'Descrição da Verba / Rubrica', 'Letra 1 (R$)', '% Aplicado', 'Letra 2 (R$)', 'Diferença Unitária / Mês (R$)', 'Qtd. Meses', 'Total Diferença Acumulada (R$)', 'Reflexo 13º (R$)', 'Reflexo Férias 1/3 (R$)', 'Total c/ Reflexos (R$)']
+    ['Código', 'Descrição da Verba / Rubrica', params.letraOrigem ? `Letra ${params.letraOrigem} (R$)` : 'Letra 1 (R$)', '% Aplicado', params.letraDestino ? `Letra ${params.letraDestino} (R$)` : 'Letra 2 (R$)', 'Diferença Unitária / Mês (R$)', 'Qtd. Meses', 'Total Diferença Acumulada (R$)', 'Reflexo 13º (R$)', 'Reflexo Férias 1/3 (R$)', 'Total c/ Reflexos (R$)']
   ];
 
   summary.rows.forEach(r => {

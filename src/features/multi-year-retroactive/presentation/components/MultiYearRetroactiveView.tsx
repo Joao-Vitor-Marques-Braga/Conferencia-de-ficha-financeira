@@ -132,9 +132,13 @@ export const MultiYearRetroactiveView: React.FC<MultiYearRetroactiveViewProps> =
               <thead>
                 <tr className="bg-[#0b131e] text-slate-200 border-b border-[#324f72]/40 uppercase font-black text-[11px] tracking-wider">
                   <th className="py-3 px-4">Cód. / Rubrica</th>
-                  <th className="py-3 px-4 text-right">L1 Médio (R$)</th>
+                  <th className="py-3 px-4 text-right">
+                    {summary.params?.letraOrigem ? `Letra ${summary.params.letraOrigem} Méd. (R$)` : 'L1 Médio (R$)'}
+                  </th>
                   <th className="py-3 px-4 text-center">% Appl.</th>
-                  <th className="py-3 px-4 text-right text-[#008d50]">L2 Médio (R$)</th>
+                  <th className="py-3 px-4 text-right text-[#008d50]">
+                    {summary.params?.letraDestino ? `Letra ${summary.params.letraDestino} Méd. (R$)` : 'L2 Médio (R$)'}
+                  </th>
                   <th className="py-3 px-4 text-right text-[#ead04d]">Dif. Média</th>
                   <th className="py-3 px-4 text-center">Qtd. Meses</th>
                   <th className="py-3 px-4 text-right text-[#f88543]">Total Acumulado</th>

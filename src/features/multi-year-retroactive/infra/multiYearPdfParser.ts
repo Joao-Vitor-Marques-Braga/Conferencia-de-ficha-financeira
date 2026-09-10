@@ -179,17 +179,8 @@ function extractMonthlyRecords(
       rowItems.sort((a, b) => a.x - b.x);
       const rowText = rowItems.map(i => i.text).join(' ');
 
-      // Ignore discount totals, footer totals, bank loans (consignado), taxes, adiantamentos, iparv/ipasgo and generic deductions
+      // Ignore discount totals, footer totals and summary rows without rubric codes
       if (/TOTAL\s*DE\s*DESCONTOS|TOTAL\s*DESCONTOS|TOTAL\s*DE\s*PROVENTOS|L[IÍ]QUIDO\s*A\s*RECEBER|BASE\s*DE\s*C[AÁ]LCULO/i.test(rowText)) return;
-      if (/IPARV|IPASGO|INSS|IRRF|CONSIGNADO|EMPR[EÉ]STIMO|DESCONTO|PENS[AÃ]O\s*ALIMENT|SINDICATO|MENSALIDADE|UNIMED|PLANO\s*DE\s*SA[UÚ]DE|VALE\s*TRANSPORTE|ADIANTAMENTO|SINDIVERDE|PLANO ODONTO|MULTA DE TRANSITO|INDENIZACAO LICENCA PREMIO  /i.test(rowText)) return;
-      if (/\bFALTA\b|\bFALTAS\b/i.test(rowText)) return;
-
-      // Ignore Função Gratificada / Cargo em Comissão (FG, FC, etc.) - not subject to career letter progression
-      if (/\bFG\b|\bFC\b|\bFG-\d+\b|FUN[CÇ][AÃ]O\s*GRATIFICADA|FUN[CÇ][AÃ]O\s*COMISSIONADA|CARGO\s*EM\s*COMISS[AÃ]O/i.test(rowText)) return;
-      if (/^\s*(?:1158|1721|3503|3876)\b/i.test(rowText)) return;
-
-      // Ignore Abono de Permanência
-      if (/ABONO\s*PERMAN[EÊ]NCIA|\b609\b/i.test(rowText)) return;
 
       // Extract real numeric code and description from label
       const codeMatch = rowText.match(/(?:^|\s)(\d{1,4})\s*[-–]\s*(.+)$/);
@@ -198,9 +189,8 @@ function extractMonthlyRecords(
       const eventCode = codeMatch[1];
       const rawDesc = codeMatch[2].replace(/\s*\d+,\d+.*$/, '').trim();
 
-      // Ignore known discount codes
-      const isDesconto = ["54", "1883", "142", "160", "640", "641", "657", "719", "86", "91", "94", "95", "101", "104", "282", "1121", "3359"].includes(eventCode);
-      if (isDesconto) return;
+      // Classify the rubric based on career progression defaults (FG, Abono, Descontos, etc.)
+      const classification = classifyEventRubric(eventCode, rawDesc, rowText);
 
       // Separate Event Label (left items) from data columns (items near/under month columns)
       const firstMonthX = monthHeaderPositions[0]?.x || 145;
@@ -255,9 +245,11 @@ function extractMonthlyRecords(
           const ev: ParsedEvent = {
             codigo: eventCode,
             descricao: eventDesc,
-            tipo: 'PROVENTO',
+            tipo: classification.tipo,
             referencia,
-            valor
+            valor,
+            defaultIgnored: classification.defaultIgnored,
+            categoria: classification.categoria
           };
 
           const list = eventsByMonth.get(m) || [];
@@ -300,3 +292,83 @@ function extractMonthlyRecords(
 }
 
 export { mergePdfParseResults } from '../../report-parser/mergePdfResults';
+
+export interface EventClassification {
+  defaultIgnored: boolean;
+  categoria: 'CARREIRA' | 'FG_COMISSAO' | 'ABONO_PERMANENCIA' | 'DESCONTO' | 'OUTROS';
+  tipo: 'PROVENTO' | 'DESCONTO';
+  motivoExclusao?: string;
+}
+
+export function classifyEventRubric(
+  eventCode: string,
+  eventDesc: string,
+  rowText: string = ''
+): EventClassification {
+  const combined = `${eventCode} ${eventDesc} ${rowText}`.toUpperCase();
+
+  // 1. Função Gratificada / Cargo em Comissão (FG, FC, etc.) - não compõe progressão de letra de carreira
+  if (
+    /\bFG\b|\bFC\b|\bFG-\d+\b|FUN[CÇ][AÃ]O\s*GRATIFICADA|FUN[CÇ][AÃ]O\s*COMISSIONADA|CARGO\s*EM\s*COMISS[AÃ]O/i.test(combined) ||
+    /^\s*(?:1158|1721|3503|3876)\b/.test(eventCode)
+  ) {
+    return {
+      defaultIgnored: true,
+      categoria: 'FG_COMISSAO',
+      tipo: 'PROVENTO',
+      motivoExclusao: 'Função Gratificada / Cargo em Comissão'
+    };
+  }
+
+  // 2. Abono de Permanência (609)
+  if (/ABONO\s*PERMAN[EÊ]NCIA|\b609\b/i.test(combined) || eventCode === '609') {
+    return {
+      defaultIgnored: true,
+      categoria: 'ABONO_PERMANENCIA',
+      tipo: 'PROVENTO',
+      motivoExclusao: 'Abono de Permanência'
+    };
+  }
+
+  // 3. Códigos cadastrados de descontos e deduções do sistema Centi
+  const KNOWN_DISCOUNT_CODES = [
+    "54", "1883", "142", "160", "640", "641", "657", "719", "86", "91", "94", "95", "101", "104", "282", "1121", "3359"
+  ];
+  if (KNOWN_DISCOUNT_CODES.includes(eventCode)) {
+    return {
+      defaultIgnored: true,
+      categoria: 'DESCONTO',
+      tipo: 'DESCONTO',
+      motivoExclusao: 'Desconto / Retenção cadastrada'
+    };
+  }
+
+  // 4. Descontos, empréstimos, previdência, planos, indenizações e faltas
+  if (
+    /IPARV|IPASGO|INSS|IRRF|CONSIGNADO|EMPR[EÉ]STIMO|DESCONTO|PENS[AÃ]O\s*ALIMENT|SINDICATO|MENSALIDADE|UNIMED|PLANO\s*DE\s*SA[UÚ]DE|VALE\s*TRANSPORTE|ADIANTAMENTO|SINDIVERDE|PLANO ODONTO|MULTA DE TRANSITO|INDENIZACAO LICENCA PREMIO/i.test(combined)
+  ) {
+    return {
+      defaultIgnored: true,
+      categoria: 'DESCONTO',
+      tipo: 'DESCONTO',
+      motivoExclusao: 'Desconto, imposto ou dedução genérica'
+    };
+  }
+
+  if (/\bFALTA\b|\bFALTAS\b/i.test(combined)) {
+    return {
+      defaultIgnored: true,
+      categoria: 'DESCONTO',
+      tipo: 'DESCONTO',
+      motivoExclusao: 'Falta / Ausência funcional'
+    };
+  }
+
+  // 5. Provento Padrão de Carreira (Base, ATS, Titulação, Insalubridade, Horas Extras, Férias, etc.)
+  return {
+    defaultIgnored: false,
+    categoria: 'CARREIRA',
+    tipo: 'PROVENTO'
+  };
+}
+

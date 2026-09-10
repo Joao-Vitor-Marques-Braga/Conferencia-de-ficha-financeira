@@ -103,7 +103,8 @@ export const exportProgressionPdfReport = (
   doc.setFont('helvetica', 'bold');
   doc.text('Parâmetros:', 18, yPos + 20);
   doc.setFont('helvetica', 'normal');
-  const paramText = `% Prog.: ${formatPercent(params.percentualProgressao)} | % ATS: ${formatPercent(params.percentualATS)} | % Titul.: ${formatPercent(params.percentualTitulacao)} | Div.: ${params.divisorJornada}h`;
+  const letraEvolucao = params.letraOrigem && params.letraDestino ? `Letra ${params.letraOrigem} → Letra ${params.letraDestino} | ` : '';
+  const paramText = `${letraEvolucao}% Prog.: ${formatPercent(params.percentualProgressao)}`;
   doc.text(paramText, 38, yPos + 20);
 
   doc.setFont('helvetica', 'bold');
@@ -119,16 +120,19 @@ export const exportProgressionPdfReport = (
   doc.setTextColor(...colorNavy);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9.5);
-  doc.text('1. APURAÇÃO ANALÍTICA DE DIFERENÇAS SALARIAIS (LETRA 1 → LETRA 2)', 14, yPos);
+  const secTitle = params.letraOrigem && params.letraDestino
+    ? `1. APURAÇÃO ANALÍTICA DE DIFERENÇAS SALARIAIS (LETRA ${params.letraOrigem} → LETRA ${params.letraDestino})`
+    : '1. APURAÇÃO ANALÍTICA DE DIFERENÇAS SALARIAIS (LETRA 1 → LETRA 2)';
+  doc.text(secTitle, 14, yPos);
 
   yPos += 2;
   const tableHead = [
     [
       { content: 'Cód.', styles: { halign: 'center' as const } },
       { content: 'Verba / Evento', styles: { halign: 'left' as const } },
-      { content: 'Letra 1 (R$)', styles: { halign: 'right' as const } },
+      { content: params.letraOrigem ? `Letra ${params.letraOrigem} (R$)` : 'Letra 1 (R$)', styles: { halign: 'right' as const } },
       { content: '%', styles: { halign: 'center' as const } },
-      { content: 'Letra 2 (R$)', styles: { halign: 'right' as const } },
+      { content: params.letraDestino ? `Letra ${params.letraDestino} (R$)` : 'Letra 2 (R$)', styles: { halign: 'right' as const } },
       { content: 'Dif./Mês (R$)', styles: { halign: 'right' as const } },
       { content: 'Qtd. Meses', styles: { halign: 'center' as const } },
       { content: 'Total Acum. (R$)', styles: { halign: 'right' as const } },

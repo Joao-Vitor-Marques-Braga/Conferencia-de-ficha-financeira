@@ -76,9 +76,13 @@ export const ProgressionTable: React.FC<ProgressionTableProps> = ({
           <thead>
             <tr className="bg-[#0b131e] text-slate-200 border-b border-[#324f72]/40 uppercase font-black text-[11px] tracking-wider">
               <th className="py-3.5 px-4 font-black">Cód. / Evento</th>
-              <th className="py-3.5 px-4 text-right font-black">Letra 1 (R$)</th>
+              <th className="py-3.5 px-4 text-right font-black">
+                {summary.params?.letraOrigem ? `Letra ${summary.params.letraOrigem} (R$)` : 'Letra 1 (R$)'}
+              </th>
               <th className="py-3.5 px-4 text-center font-black">% Appl.</th>
-              <th className="py-3.5 px-4 text-right font-black text-[#008d50]">Letra 2 (R$)</th>
+              <th className="py-3.5 px-4 text-right font-black text-[#008d50]">
+                {summary.params?.letraDestino ? `Letra ${summary.params.letraDestino} (R$)` : 'Letra 2 (R$)'}
+              </th>
               <th className="py-3.5 px-4 text-right font-black text-[#ead04d]">Diferença/Mês</th>
               <th className="py-3.5 px-4 text-center font-black">Qtd. Meses</th>
               <th className="py-3.5 px-4 text-right font-black text-[#f88543]">Total Acumulado</th>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { SavedCalculation } from '../../../core/types';
 import { storageService } from '../../../core/services/storageService';
+import { useAuth } from '../../../core/context/AuthContext';
 import { formatCurrency } from '../../../core/utils/formatters';
 import { exportProgressionPdfReport } from '../../pdf-exporter/exportProgressionPdf';
 import { exportConsolidatedSpreadsheet } from '../../spreadsheet-exporter/exportSpreadsheet';
@@ -13,7 +14,11 @@ import {
   Download,
   Trash2,
   ExternalLink,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Cloud,
+  CloudUpload,
+  Loader2,
+  HardDrive
 } from 'lucide-react';
 
 interface HistoryDrawerProps {
@@ -27,32 +32,65 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
   onClose,
   onLoadCalculation
 }) => {
+  const { user, isConfigured } = useAuth();
   const [calculations, setCalculations] = useState<SavedCalculation[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'CONFERIDO' | 'PENDENTE'>('ALL');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncSuccess, setSyncSuccess] = useState<string | null>(null);
 
   const refreshList = () => {
     setCalculations(storageService.getSavedCalculations());
   };
 
   useEffect(() => {
-    if (isOpen) {
-      refreshList();
+    if (!isOpen) return;
+
+    // Initial load from cache/storage
+    refreshList();
+
+    // If user is authenticated, listen to real-time updates from Cloud Firestore
+    if (user && isConfigured) {
+      const unsubscribe = storageService.listenToCloudCalculations(user.uid, (cloudItems) => {
+        setCalculations(cloudItems);
+      });
+      return () => unsubscribe();
+    } else {
+      // Subscribe to local storage changes
+      const unsubscribe = storageService.subscribe(() => {
+        refreshList();
+      });
+      return () => unsubscribe();
     }
-  }, [isOpen]);
+  }, [isOpen, user, isConfigured]);
 
   if (!isOpen) return null;
 
-  const handleToggleConferido = (id: string, e: React.MouseEvent) => {
+  const handleSyncToCloud = async () => {
+    if (!user) return;
+    try {
+      setIsSyncing(true);
+      const res = await storageService.syncLocalToCloud(user.uid);
+      setSyncSuccess(`${res.synced} apuração(ões) sincronizada(s) com a nuvem!`);
+      setTimeout(() => setSyncSuccess(null), 4000);
+      refreshList();
+    } catch (err) {
+      console.error('Erro ao sincronizar:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleToggleConferido = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    storageService.toggleConferidoStatus(id);
+    await storageService.toggleConferidoStatus(id);
     refreshList();
   };
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm('Tem certeza que deseja excluir esta apuração do histórico local?')) {
-      storageService.deleteCalculation(id);
+    if (confirm('Tem certeza que deseja excluir esta apuração do histórico?')) {
+      await storageService.deleteCalculation(id);
       refreshList();
     }
   };
@@ -91,18 +129,60 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
               <History className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white transition-colors">Histórico de Apurações Salvas</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 transition-colors">Armazenamento local seguro no seu navegador (IndexedDB / LocalStorage)</p>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white transition-colors">Histórico de Apurações</h3>
+                {user ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                    <Cloud className="w-3 h-3" />
+                    Nuvem Firebase
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    <HardDrive className="w-3 h-3" />
+                    Local
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 transition-colors">
+                {user 
+                  ? `Sincronizado na conta de ${user.displayName || user.email}`
+                  : 'Armazenamento local seguro no seu navegador'}
+              </p>
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#1b2a3f] transition-all cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {user && calculations.length > 0 && (
+              <button
+                onClick={handleSyncToCloud}
+                disabled={isSyncing}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors disabled:opacity-50"
+                title="Sincronizar apurações com o Cloud Firestore"
+              >
+                {isSyncing ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <CloudUpload className="w-3.5 h-3.5" />
+                )}
+                <span>Sincronizar</span>
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#1b2a3f] transition-all cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
+
+        {syncSuccess && (
+          <div className="px-6 py-2 bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-200 dark:border-emerald-800/50 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2 animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>{syncSuccess}</span>
+          </div>
+        )}
 
         {/* Search & Status Filters */}
         <div className="p-4 bg-slate-50/70 dark:bg-[#132030]/60 border-b border-slate-200 dark:border-[#324f72]/40 space-y-3 transition-colors">

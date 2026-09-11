@@ -19,9 +19,13 @@ import { exportConsolidatedSpreadsheet, exportDetailedMonthlySpreadsheet } from 
 import { storageService } from './core/services/storageService';
 import { roundMoney } from './core/utils/math';
 import type { ParseResult, ProgressionParams, CalculatedEventRow, SavedCalculation, UnifiedVerbaGroup } from './core/types';
-import { Download, FileCheck, ShieldCheck, Save, FileSpreadsheet, CheckCircle2, Filter } from 'lucide-react';
+import { Download, FileCheck, ShieldCheck, Save, FileSpreadsheet, CheckCircle2, Filter, Loader2 } from 'lucide-react';
+import { useAuth } from './core/context/AuthContext';
+import { LoginScreen } from './core/components/LoginScreen';
 
 export function App() {
+  const { user, loading } = useAuth();
+
   // Navigation tabs: 'PROGRESSAO' | 'INCENTIVO' | 'MASSA'
   const [activeTab, setActiveTab] = useState<'PROGRESSAO' | 'INCENTIVO' | 'MASSA'>('PROGRESSAO');
 
@@ -64,6 +68,10 @@ export function App() {
 
   useEffect(() => {
     refreshSavedCount();
+    const unsubscribe = storageService.subscribe(() => {
+      refreshSavedCount();
+    });
+    return () => unsubscribe();
   }, [refreshSavedCount]);
 
   // Show temporary toast
@@ -381,6 +389,26 @@ export function App() {
     }));
     showToast(`${selectedCodes.length} verbas aplicadas ao cálculo.`, 'success');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-100 dark:bg-[#070e17] text-slate-900 dark:text-white transition-colors">
+        <img 
+          src="/rio_verde_brasao_clean.png" 
+          alt="Prefeitura de Rio Verde" 
+          className="w-24 h-24 object-contain animate-pulse mb-4 drop-shadow-md"
+        />
+        <div className="flex items-center space-x-2.5 text-xs font-bold text-slate-600 dark:text-slate-400">
+          <Loader2 className="w-4 h-4 animate-spin text-[#008d50]" />
+          <span>Verificando autenticação institucional...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginScreen />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-[#0b131e] text-slate-800 dark:text-slate-100 flex flex-col selection:bg-[#008d50] selection:text-white transition-colors duration-200">

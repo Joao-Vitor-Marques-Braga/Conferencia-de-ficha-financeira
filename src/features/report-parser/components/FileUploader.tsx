@@ -68,8 +68,8 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onDataParsed }) => {
         onClick={() => fileInputRef.current?.click()}
         className={`relative cursor-pointer rounded-3xl border-2 border-dashed p-10 text-center transition-all duration-200 ${
           dragOver
-            ? 'border-[#008d50] bg-[#008d50]/15 scale-[1.01]'
-            : 'border-[#324f72] bg-[#132030] hover:border-[#008d50] hover:bg-[#18283d] shadow-sm'
+            ? 'border-[#008d50] bg-emerald-50/70 dark:bg-[#008d50]/15 scale-[1.01]'
+            : 'border-slate-300 bg-white hover:border-[#008d50] hover:bg-emerald-50/40 shadow-xs dark:border-[#324f72] dark:bg-[#132030] dark:hover:border-[#008d50] dark:hover:bg-[#18283d]'
         }`}
       >
         <input
@@ -82,7 +82,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onDataParsed }) => {
         />
 
         <div className="flex flex-col items-center justify-center space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-[#008d50]/20 border border-[#008d50]/30 flex items-center justify-center text-[#008d50]">
+          <div className="w-16 h-16 rounded-2xl bg-[#008d50]/15 border border-[#008d50]/30 flex items-center justify-center text-[#008d50]">
             {parsing ? (
               <Loader2 className="w-8 h-8 animate-spin text-[#008d50]" />
             ) : (
@@ -91,11 +91,11 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onDataParsed }) => {
           </div>
 
           <div className="space-y-1.5">
-            <h2 className="text-xl font-bold text-white">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white transition-colors">
               {parsing ? 'Processando Fichas Financeiras...' : 'Arraste & Solte uma ou mais Fichas em PDF'}
             </h2>
-            <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
-              Suporta múltiplos arquivos para apurações multi-ano (ex: 2025 e 2026). Layout padrão do <strong className="text-[#ead04d]">Sistema Centi</strong>.
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto transition-colors">
+              Suporta múltiplos arquivos para apurações multi-ano (ex: 2025 e 2026). Layout padrão do <strong className="text-amber-700 dark:text-[#ead04d] font-bold">Sistema Centi</strong>.
             </p>
           </div>
 
@@ -108,14 +108,14 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onDataParsed }) => {
           )}
 
           {fileNames.length > 0 && !errorMsg && (
-            <div className="inline-flex flex-wrap items-center justify-center gap-1.5 px-3 py-1.5 bg-[#008d50]/15 border border-[#008d50]/40 rounded-2xl text-xs font-bold text-[#008d50]">
+            <div className="inline-flex flex-wrap items-center justify-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-[#008d50]/15 border border-emerald-300 dark:border-[#008d50]/40 rounded-2xl text-xs font-bold text-emerald-800 dark:text-[#008d50] transition-colors">
               <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
               <span>{fileNames.length === 1 ? `Arquivo: ${fileNames[0]}` : `${fileNames.length} arquivos carregados: ${fileNames.join(', ')}`}</span>
             </div>
           )}
 
           {errorMsg && (
-            <div className="inline-flex items-center px-3 py-1 bg-red-500/10 border border-red-500/30 rounded-full text-xs font-semibold text-red-400">
+            <div className="inline-flex items-center px-3 py-1 bg-rose-50 dark:bg-red-500/10 border border-rose-300 dark:border-red-500/30 rounded-full text-xs font-semibold text-rose-700 dark:text-red-400">
               <AlertCircle className="w-3.5 h-3.5 mr-1.5" /> {errorMsg}
             </div>
           )}

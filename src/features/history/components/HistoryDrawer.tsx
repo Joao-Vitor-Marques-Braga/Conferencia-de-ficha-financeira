@@ -81,31 +81,31 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-xs animate-fade-in">
-      <div className="w-full max-w-2xl bg-[#0f1a27] border-l border-[#324f72] h-full flex flex-col shadow-2xl text-slate-100">
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/60 dark:bg-black/70 backdrop-blur-xs animate-fade-in">
+      <div className="w-full max-w-2xl bg-white dark:bg-[#0f1a27] border-l border-slate-200 dark:border-[#324f72] h-full flex flex-col shadow-2xl text-slate-800 dark:text-slate-100 transition-colors">
         
         {/* Drawer Header */}
-        <div className="px-6 py-4 bg-[#132030] border-b border-[#324f72]/60 flex items-center justify-between">
+        <div className="px-6 py-4 bg-slate-50 dark:bg-[#132030] border-b border-slate-200 dark:border-[#324f72]/60 flex items-center justify-between transition-colors">
           <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-xl bg-[#008d50]/20 border border-[#008d50]/40 flex items-center justify-center text-[#008d50]">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-[#008d50]/20 border border-emerald-300 dark:border-[#008d50]/40 flex items-center justify-center text-[#008d50]">
               <History className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-white">Histórico de Apurações Salvas</h3>
-              <p className="text-xs text-slate-400">Armazenamento local seguro no seu navegador (IndexedDB / LocalStorage)</p>
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white transition-colors">Histórico de Apurações Salvas</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 transition-colors">Armazenamento local seguro no seu navegador (IndexedDB / LocalStorage)</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#1b2a3f] transition-all cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#1b2a3f] transition-all cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Search & Status Filters */}
-        <div className="p-4 bg-[#132030]/60 border-b border-[#324f72]/40 space-y-3">
+        <div className="p-4 bg-slate-50/70 dark:bg-[#132030]/60 border-b border-slate-200 dark:border-[#324f72]/40 space-y-3 transition-colors">
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
             <input
@@ -113,7 +113,7 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
               placeholder="Buscar por servidor, matrícula, cargo ou portaria..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-[#0b131e] border border-[#324f72] rounded-xl pl-10 pr-4 py-2 text-xs text-white font-bold placeholder:text-slate-500 focus:outline-none focus:border-[#008d50]"
+              className="w-full bg-white dark:bg-[#0b131e] border border-slate-300 dark:border-[#324f72] rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 dark:text-white font-bold placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#008d50] transition-colors"
             />
           </div>
 
@@ -123,8 +123,8 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                 onClick={() => setStatusFilter('ALL')}
                 className={`px-3 py-1 rounded-lg font-bold border transition-all cursor-pointer ${
                   statusFilter === 'ALL'
-                    ? 'bg-[#324f72] text-white border-[#324f72]'
-                    : 'bg-[#0b131e] text-slate-400 border-[#324f72]/40'
+                    ? 'bg-[#1e3a5f] dark:bg-[#324f72] text-white border-[#1e3a5f] dark:border-[#324f72]'
+                    : 'bg-white dark:bg-[#0b131e] text-slate-600 dark:text-slate-400 border-slate-300 dark:border-[#324f72]/40 hover:bg-slate-100'
                 }`}
               >
                 Todos ({calculations.length})
@@ -134,7 +134,7 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                 className={`px-3 py-1 rounded-lg font-bold border transition-all cursor-pointer flex items-center space-x-1 ${
                   statusFilter === 'CONFERIDO'
                     ? 'bg-[#008d50] text-white border-[#008d50]'
-                    : 'bg-[#0b131e] text-[#008d50] border-[#008d50]/40'
+                    : 'bg-white dark:bg-[#0b131e] text-emerald-700 dark:text-[#008d50] border-emerald-300 dark:border-[#008d50]/40 hover:bg-emerald-50'
                 }`}
               >
                 <CheckCircle2 className="w-3 h-3 mr-1" /> Conferidos ({calculations.filter(c => c.conferido).length})
@@ -143,8 +143,8 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                 onClick={() => setStatusFilter('PENDENTE')}
                 className={`px-3 py-1 rounded-lg font-bold border transition-all cursor-pointer flex items-center space-x-1 ${
                   statusFilter === 'PENDENTE'
-                    ? 'bg-[#f88543] text-slate-950 border-[#f88543]'
-                    : 'bg-[#0b131e] text-[#f88543] border-[#f88543]/40'
+                    ? 'bg-[#ea580c] dark:bg-[#f88543] text-white dark:text-slate-950 border-[#ea580c] dark:border-[#f88543]'
+                    : 'bg-white dark:bg-[#0b131e] text-orange-700 dark:text-[#f88543] border-orange-300 dark:border-[#f88543]/40 hover:bg-orange-50'
                 }`}
               >
                 <Clock className="w-3 h-3 mr-1" /> Pendentes ({calculations.filter(c => !c.conferido).length})
@@ -157,10 +157,10 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
         <div className="p-4 overflow-y-auto flex-1 space-y-3">
           {filtered.length === 0 ? (
             <div className="text-center py-12 space-y-3">
-              <History className="w-12 h-12 text-slate-600 mx-auto" />
-              <h4 className="text-sm font-bold text-slate-400">Nenhum cálculo salvo encontrado</h4>
+              <History className="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto" />
+              <h4 className="text-sm font-bold text-slate-600 dark:text-slate-400">Nenhum cálculo salvo encontrado</h4>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Ao realizar apurações no painel, use o botão Salvar ou o atalho <strong className="text-slate-300">Ctrl + S</strong> para armazenar o cálculo aqui.
+                Ao realizar apurações no painel, use o botão Salvar ou o atalho <strong className="text-slate-700 dark:text-slate-300">Ctrl + S</strong> para armazenar o cálculo aqui.
               </p>
             </div>
           ) : (
@@ -171,33 +171,33 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                   onLoadCalculation(item);
                   onClose();
                 }}
-                className="solid-card p-4 rounded-2xl border border-[#324f72]/60 hover:border-[#008d50]/60 transition-all cursor-pointer group bg-[#111e2e]"
+                className="p-4 rounded-2xl border border-slate-200 dark:border-[#324f72]/60 hover:border-[#008d50] dark:hover:border-[#008d50]/60 transition-all cursor-pointer group bg-slate-50/70 dark:bg-[#111e2e] shadow-2xs"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="flex items-center space-x-2">
-                      <strong className="text-white font-extrabold text-sm group-hover:text-[#008d50] transition-colors">
+                      <strong className="text-slate-900 dark:text-white font-extrabold text-sm group-hover:text-[#008d50] transition-colors">
                         {item.nomeServidor}
                       </strong>
-                      <span className="px-2 py-0.5 rounded bg-[#1b2a3f] text-[#ead04d] font-mono font-bold text-[10px] border border-[#324f72]/60">
+                      <span className="px-2 py-0.5 rounded bg-white dark:bg-[#1b2a3f] text-amber-800 dark:text-[#ead04d] font-mono font-bold text-[10px] border border-slate-200 dark:border-[#324f72]/60">
                         {item.matricula}
                       </span>
                     </div>
 
-                    <p className="text-xs text-slate-400 mt-0.5">{item.cargo} • {item.orgao}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{item.cargo} • {item.orgao}</p>
 
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px] text-slate-300 font-mono">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px] text-slate-600 dark:text-slate-300 font-mono">
                       <span>Período: <strong>{item.periodo}</strong></span>
                       {item.portariaNumero && (
-                        <span className="text-[#ead04d]">Portaria: <strong>{item.portariaNumero}</strong></span>
+                        <span className="text-amber-800 dark:text-[#ead04d]">Portaria: <strong>{item.portariaNumero}</strong></span>
                       )}
                     </div>
                   </div>
 
                   {/* Right side: Grand Total & Status */}
                   <div className="text-right shrink-0 space-y-1">
-                    <span className="text-[10px] text-slate-400 block font-mono">Total Apurado</span>
-                    <strong className="text-base font-black text-[#008d50] block font-mono">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-mono">Total Apurado</span>
+                    <strong className="text-base font-black text-emerald-700 dark:text-[#008d50] block font-mono">
                       {formatCurrency(item.grandTotal)}
                     </strong>
 
@@ -206,8 +206,8 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                       onClick={(e) => handleToggleConferido(item.id, e)}
                       className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black border transition-all cursor-pointer ${
                         item.conferido
-                          ? 'bg-[#008d50]/20 text-[#008d50] border-[#008d50]/40 hover:bg-[#008d50]/30'
-                          : 'bg-[#f88543]/20 text-[#f88543] border-[#f88543]/40 hover:bg-[#f88543]/30'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 dark:bg-[#008d50]/20 dark:text-[#008d50] dark:border-[#008d50]/40'
+                          : 'bg-orange-50 text-orange-800 border-orange-300 hover:bg-orange-100 dark:bg-[#f88543]/20 dark:text-[#f88543] dark:border-[#f88543]/40'
                       }`}
                     >
                       {item.conferido ? (
@@ -224,8 +224,8 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                 </div>
 
                 {/* Card Action Bar */}
-                <div className="flex items-center justify-between pt-3 mt-3 border-t border-[#324f72]/40 text-xs">
-                  <span className="text-[10px] text-slate-400 font-mono">
+                <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-200 dark:border-[#324f72]/40 text-xs">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                     Salvo em: {new Date(item.timestamp).toLocaleString('pt-BR')}
                   </span>
 
@@ -233,7 +233,7 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                     <button
                       type="button"
                       onClick={(e) => handleExportPdf(item, e)}
-                      className="p-1.5 rounded-lg bg-[#1b2a3f] hover:bg-[#233752] text-slate-300 hover:text-white transition-all cursor-pointer"
+                      className="p-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 dark:border-transparent dark:bg-[#1b2a3f] dark:hover:bg-[#233752] text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-all cursor-pointer shadow-2xs"
                       title="Baixar PDF Oficial"
                     >
                       <Download className="w-3.5 h-3.5 text-[#008d50]" />
@@ -242,21 +242,20 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                     <button
                       type="button"
                       onClick={(e) => handleExportExcel(item, e)}
-                      className="p-1.5 rounded-lg bg-[#1b2a3f] hover:bg-[#233752] text-slate-300 hover:text-white transition-all cursor-pointer"
+                      className="p-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 dark:border-transparent dark:bg-[#1b2a3f] dark:hover:bg-[#233752] text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-all cursor-pointer shadow-2xs"
                       title="Baixar Planilha Excel/CSV"
                     >
-                      <FileSpreadsheet className="w-3.5 h-3.5 text-[#ead04d]" />
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-amber-600 dark:text-[#ead04d]" />
                     </button>
 
                     <button
                       type="button"
                       onClick={(e) => handleDelete(item.id, e)}
-                      className="p-1.5 rounded-lg bg-[#1b2a3f] hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-all cursor-pointer"
-                      title="Excluir do Histórico"
+                      className="p-1.5 rounded-lg bg-white hover:bg-rose-50 border border-slate-200 dark:border-transparent dark:bg-[#1b2a3f] dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-all cursor-pointer shadow-2xs"
+                      title="Excluir apuração"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
-
                     <span className="inline-flex items-center text-[#008d50] font-bold text-[11px] ml-1">
                       Abrir <ExternalLink className="w-3 h-3 ml-1" />
                     </span>

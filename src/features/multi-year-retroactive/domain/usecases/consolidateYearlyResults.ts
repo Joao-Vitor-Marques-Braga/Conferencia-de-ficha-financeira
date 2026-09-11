@@ -1,5 +1,6 @@
 import type {
   CalculatedEventRow,
+  UnifiedSubItem,
   MonthlyBreakdownDetail,
   ProgressionParams,
   ProgressionSummary,
@@ -76,6 +77,18 @@ export function consolidateYearlyResults(
   const yearlyBreakdown: YearlyBreakdownGroup[] = yearlySummaries.flatMap(s => s.yearlyBreakdown);
 
   // 4. Consolidate Analytical Rows (by codigo + normalized description)
+  interface SubItemAccumulator {
+    codigo: string;
+    descricao: string;
+    sumL1Weighted: number;
+    sumL2Weighted: number;
+    totalWeight: number;
+    totalDiferenca: number;
+    reflexo13: number;
+    reflexoFerias: number;
+    percentualAplicado: number;
+  }
+
   interface RowAccumulator {
     codigo: string;
     descricao: string;
@@ -90,6 +103,7 @@ export function consolidateYearlyResults(
     isSalarioBase: boolean;
     isUnified?: boolean;
     origemCodigos?: string[];
+    subItensMap?: Map<string, SubItemAccumulator>;
   }
 
   const rowMap = new Map<string, RowAccumulator>();
@@ -108,7 +122,52 @@ export function consolidateYearlyResults(
         existing.sumL1Weighted += row.letra1Valor * weight;
         existing.sumL2Weighted += row.letra2Valor * weight;
         existing.totalWeight += weight;
+
+        if (row.subItens && existing.subItensMap) {
+          row.subItens.forEach(sub => {
+            const subExisting = existing.subItensMap!.get(sub.codigo);
+            const subWeight = sub.qtdMeses > 0 ? sub.qtdMeses : 1;
+            if (subExisting) {
+              subExisting.totalDiferenca = roundMoney(subExisting.totalDiferenca + sub.totalDiferenca);
+              subExisting.reflexo13 = roundMoney(subExisting.reflexo13 + sub.reflexo13);
+              subExisting.reflexoFerias = roundMoney(subExisting.reflexoFerias + sub.reflexoFerias);
+              subExisting.sumL1Weighted += sub.letra1Valor * subWeight;
+              subExisting.sumL2Weighted += sub.letra2Valor * subWeight;
+              subExisting.totalWeight += subWeight;
+            } else {
+              existing.subItensMap!.set(sub.codigo, {
+                codigo: sub.codigo,
+                descricao: sub.descricao,
+                sumL1Weighted: sub.letra1Valor * subWeight,
+                sumL2Weighted: sub.letra2Valor * subWeight,
+                totalWeight: subWeight,
+                totalDiferenca: sub.totalDiferenca,
+                reflexo13: sub.reflexo13,
+                reflexoFerias: sub.reflexoFerias,
+                percentualAplicado: sub.percentualAplicado
+              });
+            }
+          });
+        }
       } else {
+        const subItensMap = new Map<string, SubItemAccumulator>();
+        if (row.subItens) {
+          row.subItens.forEach(sub => {
+            const subWeight = sub.qtdMeses > 0 ? sub.qtdMeses : 1;
+            subItensMap.set(sub.codigo, {
+              codigo: sub.codigo,
+              descricao: sub.descricao,
+              sumL1Weighted: sub.letra1Valor * subWeight,
+              sumL2Weighted: sub.letra2Valor * subWeight,
+              totalWeight: subWeight,
+              totalDiferenca: sub.totalDiferenca,
+              reflexo13: sub.reflexo13,
+              reflexoFerias: sub.reflexoFerias,
+              percentualAplicado: sub.percentualAplicado
+            });
+          });
+        }
+
         rowMap.set(key, {
           codigo: row.codigo,
           descricao: row.descricao,
@@ -122,7 +181,8 @@ export function consolidateYearlyResults(
           reflexoFerias: row.reflexoFerias,
           isSalarioBase: row.isSalarioBase,
           isUnified: row.isUnified,
-          origemCodigos: row.origemCodigos
+          origemCodigos: row.origemCodigos,
+          subItensMap: row.isUnified ? subItensMap : undefined
         });
       }
     });
@@ -135,6 +195,28 @@ export function consolidateYearlyResults(
     const qtdMeses = diferencaUnitaria > 0
       ? roundMoney(item.totalDiferenca / diferencaUnitaria)
       : qtdMesesEquivalentes;
+
+    let subItens: UnifiedSubItem[] | undefined = undefined;
+    if (item.isUnified && item.subItensMap) {
+      subItens = Array.from(item.subItensMap.values()).map(sub => {
+        const subL1 = roundMoney(sub.sumL1Weighted / (sub.totalWeight || 1));
+        const subL2 = roundMoney(sub.sumL2Weighted / (sub.totalWeight || 1));
+        const subDif = roundMoney(subL2 - subL1);
+        const subQtd = subDif > 0 ? roundMoney(sub.totalDiferenca / subDif) : qtdMeses;
+        return {
+          codigo: sub.codigo,
+          descricao: sub.descricao,
+          letra1Valor: subL1,
+          percentualAplicado: sub.percentualAplicado,
+          letra2Valor: subL2,
+          diferencaUnitaria: subDif,
+          qtdMeses: subQtd,
+          totalDiferenca: sub.totalDiferenca,
+          reflexo13: sub.reflexo13,
+          reflexoFerias: sub.reflexoFerias
+        };
+      });
+    }
 
     return {
       codigo: item.codigo,
@@ -151,7 +233,8 @@ export function consolidateYearlyResults(
       reflexoFerias: item.reflexoFerias,
       isSalarioBase: item.isSalarioBase,
       isUnified: item.isUnified,
-      origemCodigos: item.origemCodigos
+      origemCodigos: item.origemCodigos,
+      subItens
     };
   });
 

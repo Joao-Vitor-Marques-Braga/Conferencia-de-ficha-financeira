@@ -1,44 +1,81 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color-scheme: light;
+  }
+
+  :root.dark {
     color-scheme: dark;
   }
-  
+
   body {
     font-family: var(--font-sans);
-    background-color: #0b131e;
-    color: #f8fafc;
+    background-color: #f1f5f9;
+    color: #0f172a;
     min-height: 100vh;
     overflow-x: hidden;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .dark body,
+  body.dark,
+  :root.dark body {
+    background-color: #0b131e;
+    color: #f8fafc;
   }
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar - Light Mode */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #101a28;
+  background: #f1f5f9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #324f72;
+  background: #cbd5e1;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Custom Scrollbar - Dark Mode */
+.dark ::-webkit-scrollbar-track {
+  background: #101a28;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #324f72;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
   background: #446995;
 }
 
-/* Solid Flat Clean Cards */
+/* Solid Flat Clean Cards - Light / Dark */
 .solid-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  color: #0f172a;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dark .solid-card,
+.solid-card.dark {
   background-color: #132030;
   border: 1px solid #21354f;
   box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.25);
+  color: #f8fafc;
 }
 
 .solid-card-hover {
@@ -47,22 +84,89 @@
 
 .solid-card-hover:hover {
   border-color: #008d50;
-  box-shadow: 0 4px 14px 0 rgba(0, 141, 80, 0.2);
+  box-shadow: 0 4px 14px 0 rgba(0, 141, 80, 0.15);
 }
 
-/* Flat solid brand utility colors */
-.bg-rv-green { background-color: #008d50; }
-.text-rv-green { color: #008d50; }
-.border-rv-green { border-color: #008d50; }
+.dark .solid-card-hover:hover {
+  border-color: #008d50;
+  box-shadow: 0 4px 14px 0 rgba(0, 141, 80, 0.25);
+}
 
-.bg-rv-navy { background-color: #324f72; }
-.text-rv-navy { color: #324f72; }
-.border-rv-navy { border-color: #324f72; }
+/* Flat solid brand utility colors - Light Mode with High Contrast */
+.bg-rv-green {
+  background-color: #008d50;
+}
 
-.bg-rv-orange { background-color: #f88543; }
-.text-rv-orange { color: #f88543; }
-.border-rv-orange { border-color: #f88543; }
+.text-rv-green {
+  color: #047857;
+}
+.dark .text-rv-green {
+  color: #00a85a;
+}
 
-.bg-rv-yellow { background-color: #ead04d; }
-.text-rv-yellow { color: #ead04d; }
-.border-rv-yellow { border-color: #ead04d; }
+.border-rv-green {
+  border-color: #008d50;
+}
+
+.bg-rv-navy {
+  background-color: #1e3a5f;
+}
+.dark .bg-rv-navy {
+  background-color: #324f72;
+}
+
+.text-rv-navy {
+  color: #1e3a5f;
+}
+.dark .text-rv-navy {
+  color: #6088b9;
+}
+
+.border-rv-navy {
+  border-color: #cbd5e1;
+}
+.dark .border-rv-navy {
+  border-color: #324f72;
+}
+
+.bg-rv-orange {
+  background-color: #ea580c;
+}
+.dark .bg-rv-orange {
+  background-color: #f88543;
+}
+
+.text-rv-orange {
+  color: #c2410c;
+}
+.dark .text-rv-orange {
+  color: #f88543;
+}
+
+.border-rv-orange {
+  border-color: #ea580c;
+}
+.dark .border-rv-orange {
+  border-color: #f88543;
+}
+
+.bg-rv-yellow {
+  background-color: #f59e0b;
+}
+.dark .bg-rv-yellow {
+  background-color: #ead04d;
+}
+
+.text-rv-yellow {
+  color: #92400e;
+}
+.dark .text-rv-yellow {
+  color: #ead04d;
+}
+
+.border-rv-yellow {
+  border-color: #f59e0b;
+}
+.dark .border-rv-yellow {
+  border-color: #ead04d;
+}

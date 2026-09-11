@@ -107,17 +107,17 @@ export const FunctionalIncentiveView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in text-slate-100">
+    <div className="space-y-6 animate-fade-in text-slate-800 dark:text-slate-100">
       
       {/* Header Banner */}
       <div className="solid-card rounded-2xl p-6 border-l-4 border-l-[#008d50] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 rounded-2xl bg-[#008d50]/20 border border-[#008d50]/40 flex items-center justify-center text-[#008d50]">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-[#008d50]/20 border border-emerald-200 dark:border-[#008d50]/40 flex items-center justify-center text-[#007240] dark:text-[#008d50]">
             <Award className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-white">Calculadora de Incentivo Funcional</h2>
-            <p className="text-xs text-slate-400 font-medium">
+            <h2 className="text-xl font-black text-slate-900 dark:text-white">Calculadora de Incentivo Funcional</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
               Apuração de diferenças retroativas com percentuais configuráveis por período e edição de salário-base
             </p>
           </div>
@@ -136,105 +136,105 @@ export const FunctionalIncentiveView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         
         {/* Card 1: Servidor & Portaria */}
-        <div className="solid-card rounded-2xl p-5 space-y-3.5 bg-[#101c2b]">
-          <h3 className="text-xs font-extrabold text-white uppercase tracking-wider text-slate-400">
+        <div className="solid-card rounded-2xl p-5 space-y-3.5 bg-white dark:bg-[#101c2b]">
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Identificação do Servidor
           </h3>
 
           <div className="space-y-2.5 text-xs">
             <div>
-              <label className="text-slate-300 font-bold block mb-1">Nome do(a) Servidor(a)</label>
+              <label className="text-slate-700 dark:text-slate-300 font-bold block mb-1">Nome do(a) Servidor(a)</label>
               <input
                 type="text"
                 value={serverNome}
                 onChange={(e) => setServerNome(e.target.value)}
-                className="w-full bg-[#0b131e] border border-[#324f72] rounded-xl px-3 py-1.5 text-white font-bold"
+                className="w-full bg-slate-50 dark:bg-[#0b131e] border border-slate-200 dark:border-[#324f72] rounded-xl px-3 py-1.5 text-slate-900 dark:text-white font-bold focus:border-[#008d50] focus:outline-hidden"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-slate-300 font-bold block mb-1">Matrícula</label>
+                <label className="text-slate-700 dark:text-slate-300 font-bold block mb-1">Matrícula</label>
                 <input
                   type="text"
                   value={serverMatricula}
                   onChange={(e) => setServerMatricula(e.target.value)}
-                  className="w-full bg-[#0b131e] border border-[#324f72] rounded-xl px-3 py-1.5 text-white font-bold"
+                  className="w-full bg-slate-50 dark:bg-[#0b131e] border border-slate-200 dark:border-[#324f72] rounded-xl px-3 py-1.5 text-slate-900 dark:text-white font-bold focus:border-[#008d50] focus:outline-hidden"
                 />
               </div>
               <div>
-                <label className="text-slate-300 font-bold block mb-1">Portaria / Decreto</label>
+                <label className="text-slate-700 dark:text-slate-300 font-bold block mb-1">Portaria / Decreto</label>
                 <input
                   type="text"
                   value={portaria}
                   onChange={(e) => setPortaria(e.target.value)}
-                  className="w-full bg-[#0b131e] border border-[#324f72] rounded-xl px-3 py-1.5 text-[#ead04d] font-bold"
+                  className="w-full bg-slate-50 dark:bg-[#0b131e] border border-slate-200 dark:border-[#324f72] rounded-xl px-3 py-1.5 text-amber-800 dark:text-[#ead04d] font-bold focus:border-[#008d50] focus:outline-hidden"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-slate-300 font-bold block mb-1">Cargo</label>
+              <label className="text-slate-700 dark:text-slate-300 font-bold block mb-1">Cargo</label>
               <input
                 type="text"
                 value={cargo}
                 onChange={(e) => setCargo(e.target.value)}
-                className="w-full bg-[#0b131e] border border-[#324f72] rounded-xl px-3 py-1.5 text-white font-bold"
+                className="w-full bg-slate-50 dark:bg-[#0b131e] border border-slate-200 dark:border-[#324f72] rounded-xl px-3 py-1.5 text-slate-900 dark:text-white font-bold focus:border-[#008d50] focus:outline-hidden"
               />
             </div>
           </div>
         </div>
 
         {/* Card 2: Período & Salário Base */}
-        <div className="solid-card rounded-2xl p-5 space-y-3.5 bg-[#101c2b]">
-          <h3 className="text-xs font-extrabold text-white uppercase tracking-wider text-slate-400">
+        <div className="solid-card rounded-2xl p-5 space-y-3.5 bg-white dark:bg-[#101c2b]">
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Período Global & Salário Base
           </h3>
 
           <div className="space-y-2.5 text-xs">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-slate-300 font-bold block mb-1">Mês Inicial (MM/AAAA)</label>
+                <label className="text-slate-700 dark:text-slate-300 font-bold block mb-1">Mês Inicial (MM/AAAA)</label>
                 <input
                   type="text"
                   value={startComp}
                   placeholder="01/2024"
                   onChange={(e) => setStartComp(e.target.value)}
-                  className="w-full bg-[#0b131e] border border-[#324f72] rounded-xl px-3 py-1.5 text-white font-bold"
+                  className="w-full bg-slate-50 dark:bg-[#0b131e] border border-slate-200 dark:border-[#324f72] rounded-xl px-3 py-1.5 text-slate-900 dark:text-white font-bold focus:border-[#008d50] focus:outline-hidden"
                 />
               </div>
               <div>
-                <label className="text-slate-300 font-bold block mb-1">Mês Final (MM/AAAA)</label>
+                <label className="text-slate-700 dark:text-slate-300 font-bold block mb-1">Mês Final (MM/AAAA)</label>
                 <input
                   type="text"
                   value={endComp}
                   placeholder="12/2024"
                   onChange={(e) => setEndComp(e.target.value)}
-                  className="w-full bg-[#0b131e] border border-[#324f72] rounded-xl px-3 py-1.5 text-white font-bold"
+                  className="w-full bg-slate-50 dark:bg-[#0b131e] border border-slate-200 dark:border-[#324f72] rounded-xl px-3 py-1.5 text-slate-900 dark:text-white font-bold focus:border-[#008d50] focus:outline-hidden"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-slate-300 font-bold block mb-1">Salário-Base Padrão (R$)</label>
+              <label className="text-slate-700 dark:text-slate-300 font-bold block mb-1">Salário-Base Padrão (R$)</label>
               <input
                 type="number"
                 step="0.01"
                 value={defaultBaseSalary}
                 onChange={(e) => setDefaultBaseSalary(parseFloat(e.target.value) || 0)}
-                className="w-full bg-[#0b131e] border border-[#008d50]/50 rounded-xl px-3 py-1.5 text-[#008d50] font-black text-sm"
+                className="w-full bg-slate-50 dark:bg-[#0b131e] border border-emerald-500/50 rounded-xl px-3 py-1.5 text-[#007240] dark:text-[#008d50] font-black text-sm focus:border-[#008d50] focus:outline-hidden"
               />
-              <p className="text-[10px] text-slate-400 mt-1">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
                 Você também pode ajustar valores específicos de cada mês diretamente na tabela abaixo.
               </p>
             </div>
 
-            <label className="flex items-center space-x-2 pt-1 cursor-pointer select-none font-bold text-xs">
+            <label className="flex items-center space-x-2 pt-1 cursor-pointer select-none font-bold text-xs text-slate-700 dark:text-slate-200">
               <input
                 type="checkbox"
                 checked={aplicarReflexos}
                 onChange={(e) => setAplicarReflexos(e.target.checked)}
-                className="accent-[#008d50] w-4 h-4 rounded"
+                className="accent-[#008d50] w-4 h-4 rounded cursor-pointer"
               />
               <span>Calcular Reflexos (13º Salário e Férias 1/3)</span>
             </label>
@@ -242,28 +242,28 @@ export const FunctionalIncentiveView: React.FC = () => {
         </div>
 
         {/* Card 3: Regras de Percentual por Período */}
-        <div className="solid-card rounded-2xl p-5 space-y-3.5 bg-[#101c2b]">
-          <h3 className="text-xs font-extrabold text-white uppercase tracking-wider text-slate-400 flex items-center justify-between">
+        <div className="solid-card rounded-2xl p-5 space-y-3.5 bg-white dark:bg-[#101c2b]">
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between">
             <span>Regras de Percentual (%)</span>
-            <span className="text-[10px] text-[#ead04d] font-bold">{periods.length} regras ativas</span>
+            <span className="text-[10px] text-amber-800 dark:text-[#ead04d] font-bold bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800/40">{periods.length} regras ativas</span>
           </h3>
 
           <div className="space-y-2 max-h-44 overflow-y-auto pr-1 text-xs">
             {periods.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center justify-between p-2 rounded-xl bg-[#17263a] border border-[#324f72]/60"
+                className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-[#17263a] border border-slate-200 dark:border-[#324f72]/60"
               >
                 <div>
-                  <span className="font-bold text-white">{p.mesInicial} a {p.mesFinal}</span>
-                  <span className="ml-2 px-2 py-0.5 rounded bg-[#008d50]/20 text-[#008d50] font-black">
+                  <span className="font-bold text-slate-900 dark:text-white">{p.mesInicial} a {p.mesFinal}</span>
+                  <span className="ml-2 px-2 py-0.5 rounded bg-emerald-50 dark:bg-[#008d50]/20 text-[#007240] dark:text-[#008d50] font-black border border-emerald-200 dark:border-emerald-700/30">
                     {p.percentual}%
                   </span>
                 </div>
                 <button
                   onClick={() => handleRemovePeriod(p.id)}
                   disabled={periods.length <= 1}
-                  className="p-1 text-slate-400 hover:text-rose-400 disabled:opacity-30 cursor-pointer"
+                  className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 disabled:opacity-30 cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -272,28 +272,28 @@ export const FunctionalIncentiveView: React.FC = () => {
           </div>
 
           {/* Add period form */}
-          <div className="pt-2 border-t border-[#324f72]/40 flex items-center gap-1.5 text-xs">
+          <div className="pt-2 border-t border-slate-200 dark:border-[#324f72]/40 flex items-center gap-1.5 text-xs">
             <input
               type="text"
               placeholder="Início"
               value={newPeriodStart}
               onChange={(e) => setNewPeriodStart(e.target.value)}
-              className="w-16 bg-[#0b131e] border border-[#324f72] rounded-lg px-2 py-1 text-white font-bold text-[11px]"
+              className="w-16 bg-slate-50 dark:bg-[#0b131e] border border-slate-200 dark:border-[#324f72] rounded-lg px-2 py-1 text-slate-900 dark:text-white font-bold text-[11px] focus:border-[#008d50] focus:outline-hidden"
             />
-            <span className="text-slate-400">a</span>
+            <span className="text-slate-500 dark:text-slate-400">a</span>
             <input
               type="text"
               placeholder="Fim"
               value={newPeriodEnd}
               onChange={(e) => setNewPeriodEnd(e.target.value)}
-              className="w-16 bg-[#0b131e] border border-[#324f72] rounded-lg px-2 py-1 text-white font-bold text-[11px]"
+              className="w-16 bg-slate-50 dark:bg-[#0b131e] border border-slate-200 dark:border-[#324f72] rounded-lg px-2 py-1 text-slate-900 dark:text-white font-bold text-[11px] focus:border-[#008d50] focus:outline-hidden"
             />
             <input
               type="number"
               placeholder="%"
               value={newPeriodPct}
               onChange={(e) => setNewPeriodPct(parseFloat(e.target.value) || 0)}
-              className="w-14 bg-[#0b131e] border border-[#324f72] rounded-lg px-2 py-1 text-white font-bold text-[11px]"
+              className="w-14 bg-slate-50 dark:bg-[#0b131e] border border-slate-200 dark:border-[#324f72] rounded-lg px-2 py-1 text-slate-900 dark:text-white font-bold text-[11px] focus:border-[#008d50] focus:outline-hidden"
             />
             <button
               onClick={handleAddPeriod}
@@ -309,49 +309,49 @@ export const FunctionalIncentiveView: React.FC = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="solid-card p-4 rounded-2xl border-l-4 border-l-[#324f72] bg-[#101c2b]">
-          <span className="text-[11px] text-slate-400 font-bold block">Base Acumulada</span>
-          <strong className="text-lg font-black text-white font-mono mt-1 block">
+        <div className="solid-card p-4 rounded-2xl border-l-4 border-l-[#324f72] bg-white dark:bg-[#101c2b]">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">Base Acumulada</span>
+          <strong className="text-lg font-black text-slate-900 dark:text-white font-mono mt-1 block">
             {formatCurrency(summary.totalBaseAcumulada)}
           </strong>
-          <span className="text-[10px] text-slate-400 mt-1 block">{summary.monthlyRows.length} meses apurados</span>
+          <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 block">{summary.monthlyRows.length} meses apurados</span>
         </div>
 
-        <div className="solid-card p-4 rounded-2xl border-l-4 border-l-[#f88543] bg-[#101c2b]">
-          <span className="text-[11px] text-slate-400 font-bold block">Diferença do Incentivo</span>
-          <strong className="text-lg font-black text-[#f88543] font-mono mt-1 block">
+        <div className="solid-card p-4 rounded-2xl border-l-4 border-l-[#f88543] bg-white dark:bg-[#101c2b]">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">Diferença do Incentivo</span>
+          <strong className="text-lg font-black text-[#ea580c] dark:text-[#f88543] font-mono mt-1 block">
             {formatCurrency(summary.totalDiferenca)}
           </strong>
-          <span className="text-[10px] text-slate-400 mt-1 block">Valor principal retroativo</span>
+          <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 block">Valor principal retroativo</span>
         </div>
 
-        <div className="solid-card p-4 rounded-2xl border-l-4 border-l-[#ead04d] bg-[#101c2b]">
-          <span className="text-[11px] text-slate-400 font-bold block">Reflexos (13º + Férias 1/3)</span>
-          <strong className="text-lg font-black text-[#ead04d] font-mono mt-1 block">
+        <div className="solid-card p-4 rounded-2xl border-l-4 border-l-[#ead04d] bg-white dark:bg-[#101c2b]">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">Reflexos (13º + Férias 1/3)</span>
+          <strong className="text-lg font-black text-amber-700 dark:text-[#ead04d] font-mono mt-1 block">
             {formatCurrency(summary.totalReflexo13 + summary.totalReflexoFerias)}
           </strong>
-          <span className="text-[10px] text-slate-400 mt-1 block">
+          <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 block">
             13º: {formatCurrency(summary.totalReflexo13)} | Férias: {formatCurrency(summary.totalReflexoFerias)}
           </span>
         </div>
 
-        <div className="solid-card p-4 rounded-2xl border-l-4 border-l-[#008d50] bg-[#101c2b]">
-          <span className="text-[11px] text-slate-400 font-bold block">Total Geral Devido</span>
-          <strong className="text-xl font-black text-[#008d50] font-mono mt-1 block">
+        <div className="solid-card p-4 rounded-2xl border-l-4 border-l-[#008d50] bg-white dark:bg-[#101c2b]">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">Total Geral Devido</span>
+          <strong className="text-xl font-black text-[#007240] dark:text-[#008d50] font-mono mt-1 block">
             {formatCurrency(summary.grandTotal)}
           </strong>
-          <span className="text-[10px] text-emerald-400 font-bold mt-1 block">Principal + Reflexos Legais</span>
+          <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold mt-1 block">Principal + Reflexos Legais</span>
         </div>
       </div>
 
       {/* Monthly Calculation Table */}
-      <div className="solid-card rounded-2xl overflow-hidden shadow-xs bg-[#101c2b]">
-        <div className="px-6 py-4 bg-[#132030] border-b border-[#324f72]/40 flex items-center justify-between">
+      <div className="solid-card rounded-2xl overflow-hidden shadow-xs bg-white dark:bg-[#101c2b]">
+        <div className="px-6 py-4 bg-slate-50 dark:bg-[#132030] border-b border-slate-200 dark:border-[#324f72]/40 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Calendar className="w-4 h-4 text-[#ead04d]" />
-            <h3 className="text-sm font-extrabold text-white">Demonstrativo Mês a Mês do Incentivo Funcional</h3>
+            <Calendar className="w-4 h-4 text-amber-600 dark:text-[#ead04d]" />
+            <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Demonstrativo Mês a Mês do Incentivo Funcional</h3>
           </div>
-          <span className="text-xs text-slate-400 font-mono">
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
             {summary.monthlyRows.length} meses apurados
           </span>
         </div>
@@ -359,23 +359,23 @@ export const FunctionalIncentiveView: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse font-mono">
             <thead>
-              <tr className="bg-[#0b131e] text-slate-200 border-b border-[#324f72]/40 uppercase font-black text-[10px]">
+              <tr className="bg-slate-100 dark:bg-[#0b131e] text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-[#324f72]/40 uppercase font-black text-[10px]">
                 <th className="py-3 px-4">Competência</th>
                 <th className="py-3 px-4">Mês</th>
                 <th className="py-3 px-4 text-right">Salário Base (R$)</th>
                 <th className="py-3 px-4 text-center">% Inc.</th>
-                <th className="py-3 px-4 text-right text-[#008d50]">Incentivo Devido</th>
-                <th className="py-3 px-4 text-right text-[#ead04d]">Diferença Mês</th>
-                <th className="py-3 px-4 text-right text-slate-300">Reflexo 13º</th>
-                <th className="py-3 px-4 text-right text-slate-300">Férias 1/3</th>
-                <th className="py-3 px-4 text-right text-[#f88543]">Total do Mês</th>
+                <th className="py-3 px-4 text-right text-[#007240] dark:text-[#008d50]">Incentivo Devido</th>
+                <th className="py-3 px-4 text-right text-amber-800 dark:text-[#ead04d]">Diferença Mês</th>
+                <th className="py-3 px-4 text-right text-slate-700 dark:text-slate-300">Reflexo 13º</th>
+                <th className="py-3 px-4 text-right text-slate-700 dark:text-slate-300">Férias 1/3</th>
+                <th className="py-3 px-4 text-right text-[#c2410c] dark:text-[#f88543]">Total do Mês</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#324f72]/30 text-slate-200">
+            <tbody className="divide-y divide-slate-200 dark:divide-[#324f72]/30 text-slate-800 dark:text-slate-200">
               {summary.monthlyRows.map((r) => (
-                <tr key={r.competencia} className="hover:bg-[#1b2a3f]/50">
-                  <td className="py-2.5 px-4 font-bold text-white">{r.competencia}</td>
-                  <td className="py-2.5 px-4 font-sans text-slate-300">{r.mesNome}</td>
+                <tr key={r.competencia} className="hover:bg-slate-50 dark:hover:bg-[#1b2a3f]/50">
+                  <td className="py-2.5 px-4 font-bold text-slate-900 dark:text-white">{r.competencia}</td>
+                  <td className="py-2.5 px-4 font-sans text-slate-700 dark:text-slate-300">{r.mesNome}</td>
                   <td className="py-2.5 px-4 text-right">
                     <input
                       type="number"
@@ -385,54 +385,54 @@ export const FunctionalIncentiveView: React.FC = () => {
                         const val = parseFloat(e.target.value) || 0;
                         setMonthlyOverrides(prev => ({ ...prev, [r.competencia]: val }));
                       }}
-                      className="w-24 bg-[#0b131e] border border-[#324f72] rounded px-2 py-0.5 text-right font-mono text-xs text-white"
+                      className="w-24 bg-white dark:bg-[#0b131e] border border-slate-300 dark:border-[#324f72] rounded px-2 py-0.5 text-right font-mono text-xs text-slate-900 dark:text-white focus:border-[#008d50] focus:outline-hidden"
                     />
                   </td>
                   <td className="py-2.5 px-4 text-center">
-                    <span className="px-1.5 py-0.5 rounded bg-[#0b131e] text-slate-300 border border-[#324f72]/40 font-bold">
+                    <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#0b131e] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#324f72]/40 font-bold">
                       {formatPercent(r.percentualDevido)}
                     </span>
                   </td>
-                  <td className="py-2.5 px-4 text-right text-[#008d50] font-bold">
+                  <td className="py-2.5 px-4 text-right text-[#007240] dark:text-[#008d50] font-bold">
                     {formatCurrency(r.valorIncentivoDevido)}
                   </td>
-                  <td className="py-2.5 px-4 text-right text-[#ead04d] font-bold">
+                  <td className="py-2.5 px-4 text-right text-amber-800 dark:text-[#ead04d] font-bold">
                     {formatCurrency(r.diferenca)}
                   </td>
-                  <td className="py-2.5 px-4 text-right text-slate-300">
+                  <td className="py-2.5 px-4 text-right text-slate-700 dark:text-slate-300">
                     {formatCurrency(r.reflexo13)}
                   </td>
-                  <td className="py-2.5 px-4 text-right text-slate-300">
+                  <td className="py-2.5 px-4 text-right text-slate-700 dark:text-slate-300">
                     {formatCurrency(r.reflexoFerias)}
                   </td>
-                  <td className="py-2.5 px-4 text-right text-[#f88543] font-black">
+                  <td className="py-2.5 px-4 text-right text-[#c2410c] dark:text-[#f88543] font-black">
                     {formatCurrency(r.totalMes)}
                   </td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr className="bg-[#0b131e] border-t-2 border-[#324f72] text-white font-bold text-xs">
+              <tr className="bg-slate-100 dark:bg-[#0b131e] border-t-2 border-slate-300 dark:border-[#324f72] text-slate-900 dark:text-white font-bold text-xs">
                 <td colSpan={2} className="py-3.5 px-4 uppercase font-black">
                   TOTAL GERAL
                 </td>
-                <td className="py-3.5 px-4 text-right font-mono text-slate-300">
+                <td className="py-3.5 px-4 text-right font-mono text-slate-700 dark:text-slate-300">
                   {formatCurrency(summary.totalBaseAcumulada)}
                 </td>
                 <td className="py-3.5 px-4 text-center">-</td>
-                <td className="py-3.5 px-4 text-right text-[#008d50] font-black">
+                <td className="py-3.5 px-4 text-right text-[#007240] dark:text-[#008d50] font-black">
                   {formatCurrency(summary.totalIncentivoDevido)}
                 </td>
-                <td className="py-3.5 px-4 text-right text-[#ead04d] font-black">
+                <td className="py-3.5 px-4 text-right text-amber-800 dark:text-[#ead04d] font-black">
                   {formatCurrency(summary.totalDiferenca)}
                 </td>
-                <td className="py-3.5 px-4 text-right text-slate-200">
+                <td className="py-3.5 px-4 text-right text-slate-800 dark:text-slate-200">
                   {formatCurrency(summary.totalReflexo13)}
                 </td>
-                <td className="py-3.5 px-4 text-right text-slate-200">
+                <td className="py-3.5 px-4 text-right text-slate-800 dark:text-slate-200">
                   {formatCurrency(summary.totalReflexoFerias)}
                 </td>
-                <td className="py-3.5 px-4 text-right text-[#008d50] font-black text-sm">
+                <td className="py-3.5 px-4 text-right text-[#007240] dark:text-[#008d50] font-black text-sm">
                   {formatCurrency(summary.grandTotal)}
                 </td>
               </tr>

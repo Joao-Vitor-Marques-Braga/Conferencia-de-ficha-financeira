@@ -3,6 +3,7 @@ import type {
   ProgressionParams,
   ProgressionSummary,
   CalculatedEventRow,
+  UnifiedSubItem,
   MonthlyBreakdownDetail,
   YearlyBreakdownGroup
 } from '../../../core/types';
@@ -41,18 +42,22 @@ export function parseDateString(dateStr?: string): Date | null {
   return null;
 }
 
-export const calculateProgressionSummary = (
+/**
+ * Primary calculation engine for Functional Progression retroactive calculations.
+ * Supports configurable percentages per month, full and partial rateio, unified verbas,
+ * reflexos (13º, Férias + 1/3) and returns both an analytical summary and a monthly breakdown.
+ */
+export function calculateProgressionSummary(
   records: MonthlyRecord[],
   params: ProgressionParams,
   selectedCompetencias: string[]
-): ProgressionSummary => {
+): ProgressionSummary {
   // 1. Filter active records strictly within selected competencies
   const activeRecords = records.filter(r => selectedCompetencias.includes(r.competencia));
-  const numSelectedMonths = activeRecords.length;
 
-  if (numSelectedMonths === 0) {
+  if (activeRecords.length === 0) {
     return {
-      server: { nome: '', matricula: '', cargo: '', orgao: '', portariaNumero: params.portariaNumero },
+      server: { nome: '', matricula: '', cargo: '', orgao: '' },
       params,
       competenciasDisponiveis: records.map(r => r.competencia),
       competenciasSelecionadas: [],
@@ -74,6 +79,23 @@ export const calculateProgressionSummary = (
   const progressionFactor = 1 + (params.percentualProgressao / 100);
   const selectedCodes = params.selectedVerbaCodes;
   const unifiedGroups = params.unifiedVerbas || [];
+
+  // Helper to determine if an event code is actively selected or part of an active unified group
+  const isCodeActive = (codigo: string): boolean => {
+    // If selectedCodes is undefined, all codes are included
+    if (selectedCodes === undefined) {
+      return true;
+    }
+    // If code is explicitly in selectedCodes
+    if (selectedCodes.includes(codigo)) {
+      return true;
+    }
+    // If code belongs to any active unified group
+    if (unifiedGroups.some(g => g.codigosOriginais.includes(codigo))) {
+      return true;
+    }
+    return false;
+  };
 
   // 2. Compute calendar proportionality per month
   const effectiveDate = params.modoRateio === 'DATA_EFETIVA' && params.dataEfetiva
@@ -169,10 +191,8 @@ export const calculateProgressionSummary = (
       : params.percentualProgressao;
     const monthProgressionFactor = 1 + (monthPct / 100);
 
-    // Filter events of this month by selectedVerbaCodes
-    const filteredEvents = rec.eventos.filter(ev =>
-      !selectedCodes || selectedCodes.length === 0 || selectedCodes.includes(ev.codigo)
-    );
+    // Filter events of this month strictly by active codes (selected codes or members of active unified groups)
+    const filteredEvents = rec.eventos.filter(ev => isCodeActive(ev.codigo));
 
     const monthEventList: ProcessedMonthEvent[] = [];
     const consumedCodes = new Set<string>();
@@ -298,7 +318,16 @@ export const calculateProgressionSummary = (
   });
 
   // 4. Build Analytical CalculatedEventRow by aggregating across monthly breakdown
-  const eventAggregationMap = new Map<string, {
+  interface AggregatedSubItem {
+    codigo: string;
+    descricao: string;
+    sumL1Cheia: number;
+    sumL2Cheia: number;
+    count: number;
+    totalDiferenca: number;
+  }
+
+  interface AggregatedEventItem {
     codigo: string;
     descricao: string;
     totalDiferenca: number;
@@ -309,13 +338,15 @@ export const calculateProgressionSummary = (
     isFerias: boolean;
     isUnified?: boolean;
     origemCodigos?: string[];
-  }>();
+    subItensMap?: Map<string, AggregatedSubItem>;
+  }
+
+  const eventAggregationMap = new Map<string, AggregatedEventItem>();
 
   activeRecords.forEach((rec, idx) => {
     const mb = monthlyBreakdown[idx];
-    const filteredEvents = rec.eventos.filter(ev =>
-      !selectedCodes || selectedCodes.length === 0 || selectedCodes.includes(ev.codigo)
-    );
+    const mp = monthProportions[idx];
+    const filteredEvents = rec.eventos.filter(ev => isCodeActive(ev.codigo));
 
     const consumed = new Set<string>();
 
@@ -328,14 +359,14 @@ export const calculateProgressionSummary = (
         const l1Cheia = roundMoney(matching.reduce((sum, ev) => sum + ev.valor, 0));
         const l2Cheia = roundMoney(l1Cheia * progressionFactor);
 
-        const existing = eventAggregationMap.get(group.id);
+        let existing = eventAggregationMap.get(group.id);
         if (existing) {
           existing.totalDiferenca = roundMoney(existing.totalDiferenca + difMes);
           existing.sumL1Cheia += l1Cheia;
           existing.sumL2Cheia += l2Cheia;
           existing.count += 1;
         } else {
-          eventAggregationMap.set(group.id, {
+          existing = {
             codigo: group.id,
             descricao: group.nomeUnificado,
             totalDiferenca: difMes,
@@ -345,9 +376,35 @@ export const calculateProgressionSummary = (
             isSalarioBase: false,
             isFerias: false,
             isUnified: true,
-            origemCodigos: group.codigosOriginais
-          });
+            origemCodigos: group.codigosOriginais,
+            subItensMap: new Map()
+          };
+          eventAggregationMap.set(group.id, existing);
         }
+
+        // Aggregate individual sub-items for this unified group
+        matching.forEach(subEv => {
+          const subL1 = subEv.valor;
+          const subL2 = roundMoney(subL1 * progressionFactor);
+          const subDif = roundMoney((subL2 - subL1) * mp.fator);
+
+          const subItem = existing!.subItensMap!.get(subEv.codigo);
+          if (subItem) {
+            subItem.sumL1Cheia += subL1;
+            subItem.sumL2Cheia += subL2;
+            subItem.count += 1;
+            subItem.totalDiferenca = roundMoney(subItem.totalDiferenca + subDif);
+          } else {
+            existing!.subItensMap!.set(subEv.codigo, {
+              codigo: subEv.codigo,
+              descricao: subEv.descricao,
+              sumL1Cheia: subL1,
+              sumL2Cheia: subL2,
+              count: 1,
+              totalDiferenca: subDif
+            });
+          }
+        });
       }
     });
 
@@ -414,6 +471,30 @@ export const calculateProgressionSummary = (
 
     const pctAplicado = params.percentualProgressao;
 
+    let subItens: UnifiedSubItem[] | undefined = undefined;
+    if (item.isUnified && item.subItensMap) {
+      subItens = Array.from(item.subItensMap.values()).map(sub => {
+        const subL1 = roundMoney(sub.sumL1Cheia / (sub.count || 1));
+        const subL2 = roundMoney(sub.sumL2Cheia / (sub.count || 1));
+        const subDifUnitaria = roundMoney(subL2 - subL1);
+        const subQtdMeses = subDifUnitaria > 0 ? roundMoney(sub.totalDiferenca / subDifUnitaria) : qtdMeses;
+        const subRef13 = params.aplicarReflexo13 ? roundMoney(sub.totalDiferenca * (1 / 12)) : 0;
+        const subRefFer = params.aplicarReflexoFerias ? roundMoney(sub.totalDiferenca * (1 / 3) * (1 / 12)) : 0;
+        return {
+          codigo: sub.codigo,
+          descricao: sub.descricao,
+          letra1Valor: subL1,
+          percentualAplicado: pctAplicado,
+          letra2Valor: subL2,
+          diferencaUnitaria: subDifUnitaria,
+          qtdMeses: subQtdMeses,
+          totalDiferenca: sub.totalDiferenca,
+          reflexo13: subRef13,
+          reflexoFerias: subRefFer
+        };
+      });
+    }
+
     rows.push({
       codigo: item.codigo,
       descricao: item.descricao,
@@ -429,7 +510,8 @@ export const calculateProgressionSummary = (
       reflexoFerias,
       isSalarioBase: item.isSalarioBase,
       isUnified: item.isUnified,
-      origemCodigos: item.origemCodigos
+      origemCodigos: item.origemCodigos,
+      subItens
     });
   });
 

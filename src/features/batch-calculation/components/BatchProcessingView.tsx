@@ -169,17 +169,17 @@ export const BatchProcessingView: React.FC<BatchProcessingViewProps> = ({
   const grandTotalAll = items.reduce((acc, it) => acc + (it.summary?.grandTotal || 0), 0);
 
   return (
-    <div className="space-y-6 animate-fade-in text-slate-100">
+    <div className="space-y-6 animate-fade-in text-slate-800 dark:text-slate-100">
       
       {/* Banner */}
-      <div className="solid-card rounded-2xl p-6 border-l-4 border-l-[#f88543] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-[#101c2b]">
+      <div className="solid-card rounded-2xl p-6 border-l-4 border-l-[#f88543] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white dark:bg-[#101c2b]">
         <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 rounded-2xl bg-[#f88543]/20 border border-[#f88543]/40 flex items-center justify-center text-[#f88543]">
+          <div className="w-12 h-12 rounded-2xl bg-orange-50 dark:bg-[#f88543]/20 border border-orange-200 dark:border-[#f88543]/40 flex items-center justify-center text-[#ea580c] dark:text-[#f88543]">
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-white">Cálculo em Massa & Processamento em Lote</h2>
-            <p className="text-xs text-slate-400 font-medium">
+            <h2 className="text-xl font-black text-slate-900 dark:text-white">Cálculo em Massa & Processamento em Lote</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
               Carregue múltiplos arquivos PDF da Ficha Centi simultaneamente para calcular toda a folha de uma vez
             </p>
           </div>
@@ -190,9 +190,9 @@ export const BatchProcessingView: React.FC<BatchProcessingViewProps> = ({
             <button
               onClick={handleExportConsolidatedBatchExcel}
               disabled={processedCount === 0}
-              className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-black bg-[#1b2a3f] hover:bg-[#233752] text-[#ead04d] border border-[#324f72] disabled:opacity-40 transition-all cursor-pointer"
+              className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-black bg-slate-100 dark:bg-[#1b2a3f] hover:bg-slate-200 dark:hover:bg-[#233752] text-amber-800 dark:text-[#ead04d] border border-slate-200 dark:border-[#324f72] disabled:opacity-40 transition-all cursor-pointer"
             >
-              <FileSpreadsheet className="w-4 h-4 mr-2 text-[#ead04d]" />
+              <FileSpreadsheet className="w-4 h-4 mr-2 text-amber-700 dark:text-[#ead04d]" />
               Exportar Consolidação Geral (Excel)
             </button>
           </div>
@@ -200,18 +200,18 @@ export const BatchProcessingView: React.FC<BatchProcessingViewProps> = ({
       </div>
 
       {/* Dropzone for Multi-PDF */}
-      <div className="solid-card rounded-3xl p-8 border-2 border-dashed border-[#324f72] hover:border-[#f88543]/60 bg-[#0f1a27]/60 text-center space-y-4 transition-all">
-        <UploadCloud className="w-12 h-12 text-[#f88543] mx-auto animate-bounce" />
+      <div className="solid-card rounded-3xl p-8 border-2 border-dashed border-slate-300 dark:border-[#324f72] hover:border-[#f88543] dark:hover:border-[#f88543]/60 bg-white/60 dark:bg-[#0f1a27]/60 text-center space-y-4 transition-all">
+        <UploadCloud className="w-12 h-12 text-[#ea580c] dark:text-[#f88543] mx-auto animate-bounce" />
         <div className="space-y-1">
-          <h3 className="text-base font-extrabold text-white">
+          <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
             Arraste e solte múltiplos PDFs ou clique para selecionar
           </h3>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Suporta importação simultânea de dezenas de Fichas Financeiras do Sistema Centi
           </p>
         </div>
 
-        <label className="inline-flex items-center px-5 py-2.5 rounded-xl bg-[#f88543] hover:bg-[#df6824] text-slate-950 font-black text-xs shadow-lg transition-all cursor-pointer active:scale-95">
+        <label className="inline-flex items-center px-5 py-2.5 rounded-xl bg-[#ea580c] hover:bg-[#c2410c] dark:bg-[#f88543] dark:hover:bg-[#df6824] text-white dark:text-slate-950 font-black text-xs shadow-md transition-all cursor-pointer active:scale-95">
           <input
             type="file"
             multiple
@@ -219,26 +219,26 @@ export const BatchProcessingView: React.FC<BatchProcessingViewProps> = ({
             onChange={(e) => handleFilesSelected(e.target.files)}
             className="hidden"
           />
-          <Sparkles className="w-4 h-4 mr-2 text-slate-950 fill-current" />
+          <Sparkles className="w-4 h-4 mr-2 fill-current" />
           Selecionar Arquivos PDF
         </label>
       </div>
 
       {/* Batch Control Toolbar */}
       {items.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-[#132030] border border-[#324f72]">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-[#132030] border border-slate-200 dark:border-[#324f72]">
           <div className="flex items-center space-x-3 text-xs">
-            <span className="font-bold text-slate-200">
+            <span className="font-bold text-slate-700 dark:text-slate-200">
               {items.length} {items.length === 1 ? 'arquivo selecionado' : 'arquivos selecionados'}
             </span>
-            <span className="text-slate-500">•</span>
-            <span className="text-[#008d50] font-black">
+            <span className="text-slate-400 dark:text-slate-500">•</span>
+            <span className="text-[#007240] dark:text-[#008d50] font-black">
               {processedCount} processados
             </span>
             {grandTotalAll > 0 && (
               <>
-                <span className="text-slate-500">•</span>
-                <span className="text-[#ead04d] font-mono font-black">
+                <span className="text-slate-400 dark:text-slate-500">•</span>
+                <span className="text-amber-800 dark:text-[#ead04d] font-mono font-black">
                   Total Lote: {formatCurrency(grandTotalAll)}
                 </span>
               </>
@@ -248,14 +248,14 @@ export const BatchProcessingView: React.FC<BatchProcessingViewProps> = ({
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setItems([])}
-              className="px-3 py-1.5 rounded-xl bg-[#1b2a3f] text-slate-400 hover:text-white border border-[#324f72] text-xs font-bold cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#1b2a3f] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-[#324f72] text-xs font-bold cursor-pointer"
             >
               Limpar Lista
             </button>
             <button
               onClick={handleProcessBatch}
               disabled={isProcessing || processedCount === items.length}
-              className="inline-flex items-center px-5 py-2 rounded-xl bg-[#008d50] hover:bg-[#00663a] text-white font-black text-xs shadow-lg disabled:opacity-50 transition-all cursor-pointer"
+              className="inline-flex items-center px-5 py-2 rounded-xl bg-[#008d50] hover:bg-[#00663a] text-white font-black text-xs shadow-md disabled:opacity-50 transition-all cursor-pointer"
             >
               {isProcessing ? (
                 <>
@@ -275,68 +275,68 @@ export const BatchProcessingView: React.FC<BatchProcessingViewProps> = ({
 
       {/* Results Table */}
       {items.length > 0 && (
-        <div className="solid-card rounded-2xl overflow-hidden shadow-xs bg-[#101c2b]">
+        <div className="solid-card rounded-2xl overflow-hidden shadow-xs bg-white dark:bg-[#101c2b]">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-[#0b131e] text-slate-200 border-b border-[#324f72]/40 uppercase font-black text-[10px]">
+                <tr className="bg-slate-100 dark:bg-[#0b131e] text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-[#324f72]/40 uppercase font-black text-[10px]">
                   <th className="py-3.5 px-4">Status</th>
                   <th className="py-3.5 px-4">Arquivo</th>
                   <th className="py-3.5 px-4">Servidor(a)</th>
                   <th className="py-3.5 px-4">Matrícula</th>
                   <th className="py-3.5 px-4">Período</th>
-                  <th className="py-3.5 px-4 text-right font-mono text-[#ead04d]">Diferença Acum.</th>
-                  <th className="py-3.5 px-4 text-right font-mono text-[#008d50]">Total Devido</th>
+                  <th className="py-3.5 px-4 text-right font-mono text-amber-800 dark:text-[#ead04d]">Diferença Acum.</th>
+                  <th className="py-3.5 px-4 text-right font-mono text-[#007240] dark:text-[#008d50]">Total Devido</th>
                   <th className="py-3.5 px-4 text-center">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#324f72]/30 text-slate-200">
+              <tbody className="divide-y divide-slate-200 dark:divide-[#324f72]/30 text-slate-700 dark:text-slate-200">
                 {items.map((item) => (
-                  <tr key={item.id} className="hover:bg-[#1b2a3f]/50">
+                  <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-[#1b2a3f]/50">
                     <td className="py-3 px-4">
                       {item.status === 'PENDING' && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-700/40 text-slate-400">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-700/40 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-transparent">
                           Pendente
                         </span>
                       )}
                       {item.status === 'PROCESSING' && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-black bg-[#ead04d]/20 text-[#ead04d] flex items-center w-fit">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-50 dark:bg-[#ead04d]/20 text-amber-800 dark:text-[#ead04d] border border-amber-200 dark:border-transparent flex items-center w-fit">
                           <Loader2 className="w-3 h-3 mr-1 animate-spin" /> Processando
                         </span>
                       )}
                       {item.status === 'DONE' && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-black bg-[#008d50]/20 text-[#008d50] flex items-center w-fit">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-50 dark:bg-[#008d50]/20 text-[#007240] dark:text-[#008d50] border border-emerald-200 dark:border-transparent flex items-center w-fit">
                           <FileCheck className="w-3 h-3 mr-1" /> Concluído
                         </span>
                       )}
                       {item.status === 'ERROR' && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-black bg-rose-500/20 text-rose-300 flex items-center w-fit" title={item.errorMessage}>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-transparent flex items-center w-fit" title={item.errorMessage}>
                           <AlertCircle className="w-3 h-3 mr-1" /> Erro
                         </span>
                       )}
                     </td>
 
-                    <td className="py-3 px-4 font-mono text-slate-400 max-w-[150px] truncate" title={item.file.name}>
+                    <td className="py-3 px-4 font-mono text-slate-500 dark:text-slate-400 max-w-[150px] truncate" title={item.file.name}>
                       {item.file.name}
                     </td>
 
-                    <td className="py-3 px-4 font-bold text-white">
+                    <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">
                       {item.summary?.server.nome || '-'}
                     </td>
 
-                    <td className="py-3 px-4 font-mono font-bold text-[#ead04d]">
+                    <td className="py-3 px-4 font-mono font-bold text-amber-800 dark:text-[#ead04d]">
                       {item.summary?.server.matricula || '-'}
                     </td>
 
-                    <td className="py-3 px-4 font-mono text-slate-300">
+                    <td className="py-3 px-4 font-mono text-slate-600 dark:text-slate-300">
                       {item.summary ? `${item.summary.params.mesInicial} a ${item.summary.params.mesFinal}` : '-'}
                     </td>
 
-                    <td className="py-3 px-4 text-right font-mono font-bold text-[#ead04d]">
+                    <td className="py-3 px-4 text-right font-mono font-bold text-amber-800 dark:text-[#ead04d]">
                       {item.summary ? formatCurrency(item.summary.totalDiferencaAcumulada) : '-'}
                     </td>
 
-                    <td className="py-3 px-4 text-right font-mono font-black text-[#008d50]">
+                    <td className="py-3 px-4 text-right font-mono font-black text-[#007240] dark:text-[#008d50]">
                       {item.summary ? formatCurrency(item.summary.grandTotal) : '-'}
                     </td>
 
@@ -345,14 +345,14 @@ export const BatchProcessingView: React.FC<BatchProcessingViewProps> = ({
                         <div className="flex items-center justify-center space-x-1.5">
                           <button
                             onClick={() => onLoadSingleServer(item.parseResult!)}
-                            className="p-1.5 rounded-lg bg-[#1b2a3f] hover:bg-[#008d50]/20 text-slate-300 hover:text-[#008d50] transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-[#1b2a3f] hover:bg-emerald-50 dark:hover:bg-[#008d50]/20 text-slate-600 dark:text-slate-300 hover:text-[#007240] dark:hover:text-[#008d50] border border-slate-200 dark:border-transparent transition-colors cursor-pointer"
                             title="Carregar no Painel Principal"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => exportProgressionPdfReport(item.summary!)}
-                            className="p-1.5 rounded-lg bg-[#1b2a3f] hover:bg-[#008d50] text-slate-300 hover:text-white transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-[#1b2a3f] hover:bg-[#008d50] text-slate-600 dark:text-slate-300 hover:text-white border border-slate-200 dark:border-transparent transition-colors cursor-pointer"
                             title="Exportar PDF Individual"
                           >
                             <Download className="w-3.5 h-3.5" />

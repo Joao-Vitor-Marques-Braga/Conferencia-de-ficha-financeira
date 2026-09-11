@@ -4,6 +4,7 @@ import type { ProgressionSummary } from '../../core/types';
 import type { ConsolidationSummaryData, InstallmentOverrideMap } from '../calculation/domain/types';
 import { calculateConsolidation } from '../calculation/domain/usecases/calculateConsolidation';
 import { formatCurrency, formatPercent } from '../../core/utils/formatters';
+import { RIO_VERDE_LOGO_BASE64 } from './rioVerdeLogoBase64';
 
 export const exportProgressionPdfReport = (
   summary: ProgressionSummary,
@@ -48,23 +49,25 @@ export const exportProgressionPdfReport = (
   doc.setFillColor(...colorNavy);
   doc.rect(0, 3, pageWidth, 24, 'F');
 
+  // Official Rio Verde Emblem/Logo (rendered directly with native transparency)
+  doc.addImage(RIO_VERDE_LOGO_BASE64, 'PNG', 12, 5.5, 19, 19);
+
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('PREFEITURA MUNICIPAL DE RIO VERDE — GOIÁS', 14, 11);
+  doc.setFontSize(10.5);
+  doc.text('PREFEITURA MUNICIPAL DE RIO VERDE — GOIÁS', 35.5, 11);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.text(server.orgao || 'FUNDO MUNICIPAL DE SAÚDE / ADMINISTRAÇÃO DIRETA', 14, 17);
-  doc.text('DEMONSTRATIVO DE DIFERENÇAS DE PROGRESSÃO FUNCIONAL & PARCELAMENTO', 14, 22);
+  doc.setFontSize(8);
+  doc.text(server.orgao || 'FUNDO MUNICIPAL DE SAÚDE / ADMINISTRAÇÃO DIRETA', 35.5, 16.5);
+  doc.text('DEMONSTRATIVO DE DIFERENÇAS DE PROGRESSÃO FUNCIONAL & PARCELAMENTO', 35.5, 21.5);
 
   doc.setFontSize(7.5);
   doc.setTextColor(234, 208, 77); // Yellow highlight
   const now = new Date();
   const dataHoraEmissao = `${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-  doc.text(`Emissão: ${dataHoraEmissao}`, pageWidth - 14, 17, { align: 'right' });
+  doc.text(`Emissão: ${dataHoraEmissao}`, pageWidth - 14, 16.5, { align: 'right' });
   doc.setTextColor(255, 255, 255);
-  doc.text('O Trabalho Continua', pageWidth - 14, 22, { align: 'right' });
 
   // 2. Server Metadata Box
   let yPos = 31;
@@ -103,7 +106,7 @@ export const exportProgressionPdfReport = (
   doc.setFont('helvetica', 'bold');
   doc.text('Parâmetros:', 18, yPos + 20);
   doc.setFont('helvetica', 'normal');
-  const letraEvolucao = params.letraOrigem && params.letraDestino ? `Letra ${params.letraOrigem} → Letra ${params.letraDestino} | ` : '';
+  const letraEvolucao = params.letraOrigem && params.letraDestino ? `Letra ${params.letraOrigem} -> Letra ${params.letraDestino} | ` : '';
   const paramText = `${letraEvolucao}% Prog.: ${formatPercent(params.percentualProgressao)}`;
   doc.text(paramText, 38, yPos + 20);
 
@@ -140,17 +143,38 @@ export const exportProgressionPdfReport = (
     ]
   ];
 
-  const tableData = summary.rows.map((row) => [
-    row.codigo,
-    row.descricao,
-    formatCurrency(row.letra1Valor),
-    formatPercent(row.percentualAplicado),
-    formatCurrency(row.letra2Valor),
-    formatCurrency(row.diferencaUnitaria),
-    row.qtdMeses.toString().replace('.', ','),
-    formatCurrency(row.totalDiferenca),
-    formatCurrency(row.reflexo13)
-  ]);
+  const tableData: (string | { content: string; styles?: any })[][] = [];
+
+  summary.rows.forEach((row) => {
+    if (row.isUnified && row.subItens && row.subItens.length > 0) {
+      // No laudo PDF oficial para o servidor, desmembra a unificação para exibir diretamente os eventos e códigos originais
+      row.subItens.forEach((sub) => {
+        tableData.push([
+          sub.codigo,
+          sub.descricao,
+          formatCurrency(sub.letra1Valor),
+          formatPercent(sub.percentualAplicado),
+          formatCurrency(sub.letra2Valor),
+          formatCurrency(sub.diferencaUnitaria),
+          sub.qtdMeses.toString().replace('.', ','),
+          formatCurrency(sub.totalDiferenca),
+          formatCurrency(sub.reflexo13)
+        ]);
+      });
+    } else {
+      tableData.push([
+        row.codigo,
+        row.descricao,
+        formatCurrency(row.letra1Valor),
+        formatPercent(row.percentualAplicado),
+        formatCurrency(row.letra2Valor),
+        formatCurrency(row.diferencaUnitaria),
+        row.qtdMeses.toString().replace('.', ','),
+        formatCurrency(row.totalDiferenca),
+        formatCurrency(row.reflexo13)
+      ]);
+    }
+  });
 
   // Add Totals Row
   tableData.push([
@@ -227,18 +251,54 @@ export const exportProgressionPdfReport = (
     ]
   ];
 
-  const consolBody = consolidation.items
+  const unifiedRowMap = new Map<string, typeof summary.rows[0]>();
+  summary.rows.forEach(r => {
+    if (r.isUnified && r.subItens && r.subItens.length > 0) {
+      unifiedRowMap.set(r.codigo, r);
+    }
+  });
+
+  const consolBody: (string | { content: string; styles?: any })[][] = [];
+
+  consolidation.items
     .filter((item) => item.valorTotalIntegral > 0 || item.valorTotalProporcional > 0 || item.totalGeral > 0)
-    .map((item) => [
-      item.descricao,
-      formatCurrency(item.valorTotalIntegral),
-      item.parcelas.toString(),
-      formatCurrency(item.valorParcelaIntegral),
-      formatCurrency(item.valorTotalProporcional),
-      formatCurrency(item.valorParcelaProporcional),
-      formatCurrency(item.totalGeral),
-      formatCurrency(item.totalGeralParcelado)
-    ]);
+    .forEach((item) => {
+      const unifiedRow = unifiedRowMap.get(item.id) || (item.codigo ? unifiedRowMap.get(item.codigo) : undefined);
+      if (unifiedRow && unifiedRow.subItens && unifiedRow.subItens.length > 0) {
+        const totalDif = unifiedRow.totalDiferenca || 1;
+        unifiedRow.subItens.forEach((sub) => {
+          const ratio = totalDif > 0 ? (sub.totalDiferenca / totalDif) : (1 / unifiedRow.subItens!.length);
+          const subIntegral = item.valorTotalIntegral * ratio;
+          const subParcelaIntegral = item.valorParcelaIntegral * ratio;
+          const subProporcional = item.valorTotalProporcional * ratio;
+          const subParcelaProporcional = item.valorParcelaProporcional * ratio;
+          const subTotalGeral = item.totalGeral * ratio;
+          const subTotalGeralParcelado = item.totalGeralParcelado * ratio;
+
+          consolBody.push([
+            sub.descricao,
+            formatCurrency(subIntegral),
+            item.parcelas.toString(),
+            formatCurrency(subParcelaIntegral),
+            formatCurrency(subProporcional),
+            formatCurrency(subParcelaProporcional),
+            formatCurrency(subTotalGeral),
+            formatCurrency(subTotalGeralParcelado)
+          ]);
+        });
+      } else {
+        consolBody.push([
+          item.descricao,
+          formatCurrency(item.valorTotalIntegral),
+          item.parcelas.toString(),
+          formatCurrency(item.valorParcelaIntegral),
+          formatCurrency(item.valorTotalProporcional),
+          formatCurrency(item.valorParcelaProporcional),
+          formatCurrency(item.totalGeral),
+          formatCurrency(item.totalGeralParcelado)
+        ]);
+      }
+    });
 
   // Consolidation Totals Row
   consolBody.push([

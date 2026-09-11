@@ -92,6 +92,14 @@ export function App() {
     return Array.from(map.values());
   }, [parseResult]);
 
+  // Count of total active verbas (individual selected + inside active unified groups)
+  const activeVerbaCount = useMemo(() => {
+    if (params.selectedVerbaCodes === undefined) return allAvailableVerbas.length;
+    const set = new Set(params.selectedVerbaCodes);
+    (params.unifiedVerbas || []).forEach(g => g.codigosOriginais.forEach(c => set.add(c)));
+    return set.size;
+  }, [params.selectedVerbaCodes, params.unifiedVerbas, allAvailableVerbas.length]);
+
   // Handler when PDF or Mock is loaded
   const handleDataParsed = (result: ParseResult, overlapNotice?: string | null) => {
     setParseResult(result);
@@ -245,6 +253,40 @@ export function App() {
     setDeletedRowCodes([]);
   };
 
+  const handleUngroupEvent = (groupCodigo: string, subCodigo: string) => {
+    setParams(prev => {
+      const currentGroups = prev.unifiedVerbas || [];
+      const targetGroup = currentGroups.find(g => g.id === groupCodigo || g.codigosOriginais.includes(subCodigo));
+      if (!targetGroup) return prev;
+
+      const remainingCodes = targetGroup.codigosOriginais.filter(c => c !== subCodigo);
+      let updatedGroups: UnifiedVerbaGroup[];
+
+      // If fewer than 2 codes remain, disband the entire group
+      if (remainingCodes.length < 2) {
+        updatedGroups = currentGroups.filter(g => g.id !== targetGroup.id);
+      } else {
+        updatedGroups = currentGroups.map(g =>
+          g.id === targetGroup.id ? { ...g, codigosOriginais: remainingCodes } : g
+        );
+      }
+
+      // Add the ungrouped code (and remaining code if group disbanded) to selectedVerbaCodes so they become standalone active events
+      const currentSelected = prev.selectedVerbaCodes || allAvailableVerbas.map(v => v.codigo);
+      const codesToAdd = remainingCodes.length < 2
+        ? [subCodigo, ...remainingCodes]
+        : [subCodigo];
+      const newSelected = Array.from(new Set([...currentSelected, ...codesToAdd]));
+
+      return {
+        ...prev,
+        unifiedVerbas: updatedGroups,
+        selectedVerbaCodes: newSelected
+      };
+    });
+    showToast(`Verba ${subCodigo} desagrupada com sucesso!`, 'info');
+  };
+
   const handleMonthPercentChange = (competencia: string, newPercent: number) => {
     setParams(prev => ({
       ...prev,
@@ -341,14 +383,14 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b131e] text-slate-100 flex flex-col selection:bg-[#008d50] selection:text-white">
+    <div className="min-h-screen bg-slate-100 dark:bg-[#0b131e] text-slate-800 dark:text-slate-100 flex flex-col selection:bg-[#008d50] selection:text-white transition-colors duration-200">
 
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 animate-bounce">
           <div className={`px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 border font-bold text-xs ${toastMessage.type === 'success'
             ? 'bg-[#008d50] text-white border-[#008d50]'
-            : 'bg-[#1b2a3f] text-[#ead04d] border-[#324f72]'
+            : 'bg-white dark:bg-[#1b2a3f] text-amber-800 dark:text-[#ead04d] border-slate-200 dark:border-[#324f72]'
             }`}>
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{toastMessage.text}</span>
@@ -393,18 +435,18 @@ export function App() {
 
                 {/* Hero Banner */}
                 <div className="text-center max-w-3xl mx-auto space-y-3">
-                  <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#132030] border border-[#324f72]/60 text-xs font-bold shadow-xs">
+                  <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-white dark:bg-[#132030] border border-slate-200 dark:border-[#324f72]/60 text-xs font-bold shadow-xs">
                     <span className="flex h-2 w-2 rounded-full bg-[#008d50]" />
-                    <span className="text-[#ead04d] font-extrabold">Prefeitura de Rio Verde</span>
-                    <span className="text-slate-500">•</span>
-                    <span className="text-slate-300 font-semibold">Sistema Centi</span>
+                    <span className="text-amber-800 dark:text-[#ead04d] font-extrabold">Prefeitura de Rio Verde</span>
+                    <span className="text-slate-400 dark:text-slate-500">•</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-semibold">Sistema Centi</span>
                   </div>
 
-                  <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
+                  <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
                     Apuração e Cálculo de Diferenças Salariais por Progressão
                   </h2>
 
-                  <p className="text-sm text-slate-300 leading-relaxed max-w-2xl mx-auto font-medium">
+                  <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl mx-auto font-medium">
                     Carregue a Ficha Financeira em PDF do servidor para apurar automaticamente as diferenças salariais acumuladas entre a Letra Atual e a Letra com Progressão, incluindo rateio por data efetiva e quadro de parcelamento.
                   </p>
                 </div>
@@ -414,37 +456,37 @@ export function App() {
 
                 {/* Quick Feature Badges with Brand Colors */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto text-xs">
-                  <div className="solid-card p-4 rounded-2xl border-l-4 border-l-[#324f72] flex items-start space-x-3.5 shadow-xs">
-                    <div className="w-9 h-9 rounded-xl bg-[#324f72]/30 text-[#446995] flex items-center justify-center shrink-0 border border-[#324f72]/40">
-                      <ShieldCheck className="w-5 h-5 text-[#446995]" />
+                  <div className="solid-card p-4 rounded-2xl border-l-4 border-l-[#324f72] flex items-start space-x-3.5 shadow-xs bg-white dark:bg-[#101c2b]">
+                    <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-[#324f72]/30 text-[#1e3a5f] dark:text-[#446995] flex items-center justify-center shrink-0 border border-blue-200 dark:border-[#324f72]/40">
+                      <ShieldCheck className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="font-extrabold text-white">100% Client-Side & Seguro</h4>
-                      <p className="text-slate-400 text-[11px] mt-0.5 leading-normal font-medium">
+                      <h4 className="font-extrabold text-slate-900 dark:text-white">100% Client-Side & Seguro</h4>
+                      <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-normal font-medium">
                         Seus dados e relatórios em PDF são processados em memória no seu navegador, sem envio para servidores externos.
                       </p>
                     </div>
                   </div>
 
-                  <div className="solid-card p-4 rounded-2xl border-l-4 border-l-[#008d50] flex items-start space-x-3.5 shadow-xs">
-                    <div className="w-9 h-9 rounded-xl bg-[#008d50]/20 text-[#008d50] flex items-center justify-center shrink-0 border border-[#008d50]/40">
-                      <FileCheck className="w-5 h-5 text-[#008d50]" />
+                  <div className="solid-card p-4 rounded-2xl border-l-4 border-l-[#008d50] flex items-start space-x-3.5 shadow-xs bg-white dark:bg-[#101c2b]">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-[#008d50]/20 text-[#007240] dark:text-[#008d50] flex items-center justify-center shrink-0 border border-emerald-200 dark:border-[#008d50]/40">
+                      <FileCheck className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="font-extrabold text-white">Rateio por Quantidade de Dias</h4>
-                      <p className="text-slate-400 text-[11px] mt-0.5 leading-normal font-medium">
+                      <h4 className="font-extrabold text-slate-900 dark:text-white">Rateio por Quantidade de Dias</h4>
+                      <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-normal font-medium">
                         Cálculo proporcional flexível por quantidade de dias sobre base de 30 dias.
                       </p>
                     </div>
                   </div>
 
-                  <div className="solid-card p-4 rounded-2xl border-l-4 border-l-[#f88543] flex items-start space-x-3.5 shadow-xs">
-                    <div className="w-9 h-9 rounded-xl bg-[#f88543]/20 text-[#f88543] flex items-center justify-center shrink-0 border border-[#f88543]/40">
-                      <Download className="w-5 h-5 text-[#f88543]" />
+                  <div className="solid-card p-4 rounded-2xl border-l-4 border-l-[#f88543] flex items-start space-x-3.5 shadow-xs bg-white dark:bg-[#101c2b]">
+                    <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-[#f88543]/20 text-[#ea580c] dark:text-[#f88543] flex items-center justify-center shrink-0 border border-orange-200 dark:border-[#f88543]/40">
+                      <Download className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="font-extrabold text-white">Exportação Excel & PDF</h4>
-                      <p className="text-slate-400 text-[11px] mt-0.5 leading-normal font-medium">
+                      <h4 className="font-extrabold text-slate-900 dark:text-white">Exportação Excel & PDF</h4>
+                      <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5 leading-normal font-medium">
                         Exportação oficial em PDF, Excel Consolidado e Detalhado mês a mês.
                       </p>
                     </div>
@@ -457,53 +499,53 @@ export function App() {
               <div className="space-y-6 animate-fade-in">
 
                 {/* Top Toolbar Actions */}
-                <div className="flex flex-col lg:flex-row items-center justify-between gap-4 pb-2 border-b border-[#324f72]/40">
+                <div className="flex flex-col lg:flex-row items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-[#324f72]/40">
                   <div className="flex items-center space-x-2.5">
                     <span className="flex h-3 w-3 rounded-full bg-[#008d50] animate-pulse" />
-                    <h2 className="text-lg font-black text-white">Painel de Apuração e Apresentação</h2>
+                    <h2 className="text-lg font-black text-slate-900 dark:text-white">Painel de Apuração e Apresentação</h2>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
                     {/* Selecionar Rubricas Modal Button */}
                     <button
                       onClick={() => setIsVerbaSelectorOpen(true)}
-                      className="inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-black bg-[#132030] hover:bg-[#1b2a3f] text-white border border-[#008d50]/50 shadow-xs transition-all active:scale-95 cursor-pointer"
+                      className="inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-black bg-white dark:bg-[#132030] hover:bg-slate-50 dark:hover:bg-[#1b2a3f] text-slate-900 dark:text-white border border-emerald-500/50 shadow-xs transition-all active:scale-95 cursor-pointer"
                       title="Alterar ou revisar as rubricas e eventos incluídos no cálculo"
                     >
-                      <Filter className="w-4 h-4 mr-1.5 text-[#008d50]" />
+                      <Filter className="w-4 h-4 mr-1.5 text-[#007240] dark:text-[#008d50]" />
                       Rubricas no Cálculo
-                      <span className="ml-1.5 px-2 py-0.5 rounded-full bg-[#008d50]/20 text-[#008d50] text-[10px] font-black border border-[#008d50]/40">
-                        {params.selectedVerbaCodes ? params.selectedVerbaCodes.length : allAvailableVerbas.length}/{allAvailableVerbas.length}
+                      <span className="ml-1.5 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-[#008d50]/20 text-[#007240] dark:text-[#008d50] text-[10px] font-black border border-emerald-200 dark:border-[#008d50]/40">
+                        {activeVerbaCount}/{allAvailableVerbas.length}
                       </span>
                     </button>
 
                     {/* Save Button with Ctrl+S badge */}
                     <button
                       onClick={handleSaveCalculation}
-                      className="inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-bold bg-[#132030] hover:bg-[#1b2a3f] text-[#008d50] border border-[#008d50]/40 shadow-xs transition-all active:scale-95 cursor-pointer"
+                      className="inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-[#132030] hover:bg-slate-50 dark:hover:bg-[#1b2a3f] text-[#007240] dark:text-[#008d50] border border-emerald-500/40 shadow-xs transition-all active:scale-95 cursor-pointer"
                       title="Salvar cálculo no histórico local (Atalho: Ctrl+S)"
                     >
                       <Save className="w-4 h-4 mr-1.5" />
-                      Salvar <span className="ml-1.5 px-1.5 py-0.2 rounded bg-[#0b131e] text-[10px] text-slate-400 border border-[#324f72]">Ctrl+S</span>
+                      Salvar <span className="ml-1.5 px-1.5 py-0.2 rounded bg-slate-100 dark:bg-[#0b131e] text-[10px] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-[#324f72]">Ctrl+S</span>
                     </button>
 
                     {/* Export Excel Consolidado */}
                     <button
                       onClick={handleExportConsolidatedCsv}
-                      className="inline-flex items-center px-3 py-2 rounded-xl text-xs font-bold bg-[#132030] hover:bg-[#1b2a3f] text-[#ead04d] border border-[#324f72] transition-all cursor-pointer"
+                      className="inline-flex items-center px-3 py-2 rounded-xl text-xs font-bold bg-white dark:bg-[#132030] hover:bg-slate-50 dark:hover:bg-[#1b2a3f] text-amber-800 dark:text-[#ead04d] border border-slate-200 dark:border-[#324f72] transition-all cursor-pointer"
                       title="Exportar Planilha Excel com Resumo Consolidado e Parcelamento"
                     >
-                      <FileSpreadsheet className="w-4 h-4 mr-1.5 text-[#ead04d]" />
+                      <FileSpreadsheet className="w-4 h-4 mr-1.5 text-amber-700 dark:text-[#ead04d]" />
                       Excel Consolidado
                     </button>
 
                     {/* Export Excel Detalhado */}
                     <button
                       onClick={handleExportDetailedCsv}
-                      className="inline-flex items-center px-3 py-2 rounded-xl text-xs font-bold bg-[#132030] hover:bg-[#1b2a3f] text-slate-200 border border-[#324f72] transition-all cursor-pointer"
+                      className="inline-flex items-center px-3 py-2 rounded-xl text-xs font-bold bg-white dark:bg-[#132030] hover:bg-slate-50 dark:hover:bg-[#1b2a3f] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[#324f72] transition-all cursor-pointer"
                       title="Exportar Planilha Excel com Detalhamento Mês a Mês"
                     >
-                      <FileSpreadsheet className="w-4 h-4 mr-1.5 text-slate-400" />
+                      <FileSpreadsheet className="w-4 h-4 mr-1.5 text-slate-500 dark:text-slate-400" />
                       Excel Detalhado
                     </button>
 
@@ -533,7 +575,7 @@ export function App() {
                   onCompetenciasChange={setSelectedCompetencias}
                   onOpenVerbaSelector={() => setIsVerbaSelectorOpen(true)}
                   totalVerbasDisponiveis={allAvailableVerbas.length}
-                  verbasSelecionadasCount={params.selectedVerbaCodes ? params.selectedVerbaCodes.length : allAvailableVerbas.length}
+                  verbasSelecionadasCount={activeVerbaCount}
                   onResetParams={() => {
                     setParams({
                       percentualProgressao: 6.12,
@@ -561,13 +603,13 @@ export function App() {
                 {summary && <SummaryMetricsCards summary={summary} />}
 
                 {/* View Mode Switcher: Demonstrativo Analítico vs Detalhamento Hierárquico Ano > Mês */}
-                <div className="flex items-center justify-between p-2 rounded-2xl bg-[#0c1624] border border-[#324f72]/50">
+                <div className="flex items-center justify-between p-2 rounded-2xl bg-white dark:bg-[#0c1624] border border-slate-200 dark:border-[#324f72]/50 shadow-xs">
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => setActiveViewMode('ANALITICA')}
                       className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${activeViewMode === 'ANALITICA'
-                        ? 'bg-[#324f72] text-white shadow-xs'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-slate-100 dark:bg-[#324f72] text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                         }`}
                     >
                       Demonstrativo Analítico (Por Verba)
@@ -575,15 +617,15 @@ export function App() {
                     <button
                       onClick={() => setActiveViewMode('HIERARQUICA')}
                       className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${activeViewMode === 'HIERARQUICA'
-                        ? 'bg-[#324f72] text-white shadow-xs'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-slate-100 dark:bg-[#324f72] text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                         }`}
                     >
                       Detalhamento por Ano &gt; Mês (Acordeão)
                     </button>
                   </div>
 
-                  <span className="text-[11px] text-[#ead04d] font-mono font-bold pr-3 hidden sm:inline">
+                  <span className="text-[11px] text-amber-800 dark:text-[#ead04d] font-mono font-bold pr-3 hidden sm:inline">
                     {summary?.qtdMesesEquivalentes} meses equivalentes apurados
                   </span>
                 </div>
@@ -596,6 +638,7 @@ export function App() {
                     onDeleteRow={handleDeleteRow}
                     deletedCount={deletedRowCodes.length}
                     onRestoreRows={handleRestoreRows}
+                    onUngroupEvent={handleUngroupEvent}
                   />
                 )}
 
@@ -611,6 +654,13 @@ export function App() {
                 {summary && (
                   <SummaryConsolidation
                     summary={summary}
+                    onDiasRetroativosChange={(dias) => {
+                      setParams(prev => ({
+                        ...prev,
+                        modoRateio: 'DIAS_MANUAIS',
+                        diasRetroativos: dias
+                      }));
+                    }}
                   />
                 )}
 
@@ -626,7 +676,7 @@ export function App() {
         isOpen={isVerbaSelectorOpen}
         onClose={() => setIsVerbaSelectorOpen(false)}
         allAvailableVerbas={allAvailableVerbas}
-        selectedCodes={params.selectedVerbaCodes || allAvailableVerbas.map(v => v.codigo)}
+        selectedCodes={params.selectedVerbaCodes ?? allAvailableVerbas.map(v => v.codigo)}
         unifiedGroups={params.unifiedVerbas || []}
         onApplySelection={handleApplyVerbaSelection}
       />
@@ -639,7 +689,7 @@ export function App() {
       />
 
       {/* Footer */}
-      <footer className="bg-[#0c1521] border-t border-[#324f72]/40 text-xs text-slate-400 py-6 mt-12">
+      <footer className="bg-white dark:bg-[#0c1521] border-t border-slate-200 dark:border-[#324f72]/40 text-xs text-slate-500 dark:text-slate-400 py-6 mt-12 transition-colors">
         <div className="max-w-7xl mx-auto px-4 text-center space-y-2">
           {/* 4-color dots in footer */}
           <div className="flex items-center justify-center space-x-2">
@@ -648,8 +698,7 @@ export function App() {
             <span className="w-2.5 h-2.5 rounded-full bg-[#f88543]" />
             <span className="w-2.5 h-2.5 rounded-full bg-[#ead04d]" />
           </div>
-          <p className="font-extrabold text-slate-200">Prefeitura Municipal de Rio Verde — GO • Conferência de Ficha Financeira</p>
-          <p className="text-[11px] text-slate-500 font-medium">Desenvolvido em React + TypeScript • Processamento 100% Stateless no Navegador</p>
+          <p className="font-extrabold text-slate-700 dark:text-slate-200">Prefeitura Municipal de Rio Verde — GO • Calculadora de Progressão</p>
         </div>
       </footer>
 

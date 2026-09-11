@@ -95,6 +95,19 @@ export interface YearlyBreakdownGroup {
   grandTotalAno: number;
 }
 
+export interface UnifiedSubItem {
+  codigo: string;
+  descricao: string;
+  letra1Valor: number;
+  percentualAplicado: number;
+  letra2Valor: number;
+  diferencaUnitaria: number;
+  qtdMeses: number;
+  totalDiferenca: number;
+  reflexo13: number;
+  reflexoFerias: number;
+}
+
 export interface CalculatedEventRow {
   codigo: string;
   descricao: string;
@@ -111,6 +124,7 @@ export interface CalculatedEventRow {
   isSalarioBase: boolean;
   isUnified?: boolean;
   origemCodigos?: string[];
+  subItens?: UnifiedSubItem[];
   manualOverride?: boolean;
 }
 

@@ -54,20 +54,39 @@ export const exportConsolidatedSpreadsheet = (
   ];
 
   summary.rows.forEach(r => {
-    const totalComReflexos = r.totalDiferenca + r.reflexo13 + r.reflexoFerias;
-    rows.push([
-      r.codigo,
-      r.descricao,
-      toCsvNumber(r.letra1Valor),
-      formatPercent(r.percentualAplicado),
-      toCsvNumber(r.letra2Valor),
-      toCsvNumber(r.diferencaUnitaria),
-      r.qtdMeses.toFixed(2).replace('.', ','),
-      toCsvNumber(r.totalDiferenca),
-      toCsvNumber(r.reflexo13),
-      toCsvNumber(r.reflexoFerias),
-      toCsvNumber(totalComReflexos)
-    ]);
+    if (r.isUnified && r.subItens && r.subItens.length > 0) {
+      r.subItens.forEach(sub => {
+        const totalComReflexos = sub.totalDiferenca + sub.reflexo13 + sub.reflexoFerias;
+        rows.push([
+          sub.codigo,
+          sub.descricao,
+          toCsvNumber(sub.letra1Valor),
+          formatPercent(sub.percentualAplicado),
+          toCsvNumber(sub.letra2Valor),
+          toCsvNumber(sub.diferencaUnitaria),
+          sub.qtdMeses.toFixed(2).replace('.', ','),
+          toCsvNumber(sub.totalDiferenca),
+          toCsvNumber(sub.reflexo13),
+          toCsvNumber(sub.reflexoFerias),
+          toCsvNumber(totalComReflexos)
+        ]);
+      });
+    } else {
+      const totalComReflexos = r.totalDiferenca + r.reflexo13 + r.reflexoFerias;
+      rows.push([
+        r.codigo,
+        r.descricao,
+        toCsvNumber(r.letra1Valor),
+        formatPercent(r.percentualAplicado),
+        toCsvNumber(r.letra2Valor),
+        toCsvNumber(r.diferencaUnitaria),
+        r.qtdMeses.toFixed(2).replace('.', ','),
+        toCsvNumber(r.totalDiferenca),
+        toCsvNumber(r.reflexo13),
+        toCsvNumber(r.reflexoFerias),
+        toCsvNumber(totalComReflexos)
+      ]);
+    }
   });
 
   // Totals Row
@@ -90,17 +109,42 @@ export const exportConsolidatedSpreadsheet = (
     rows.push(['QUADRO DE CONSOLIDAÇÃO & PARCELAMENTO']);
     rows.push(['Verba / Evento', 'Total Integral (R$)', 'Nº Parcelas', 'Valor Parcela Integral (R$)', 'Total Proporcional (R$)', 'Valor Parcela Proporcional (R$)', 'Total Geral (R$)', 'Total Geral Parcelado (R$)']);
 
+    const unifiedRowMap = new Map<string, typeof summary.rows[0]>();
+    summary.rows.forEach(r => {
+      if (r.isUnified && r.subItens && r.subItens.length > 0) {
+        unifiedRowMap.set(r.codigo, r);
+      }
+    });
+
     consolidation.items.forEach(it => {
-      rows.push([
-        it.descricao,
-        toCsvNumber(it.valorTotalIntegral),
-        it.parcelas.toString(),
-        toCsvNumber(it.valorParcelaIntegral),
-        toCsvNumber(it.valorTotalProporcional),
-        toCsvNumber(it.valorParcelaProporcional),
-        toCsvNumber(it.totalGeral),
-        toCsvNumber(it.totalGeralParcelado)
-      ]);
+      const unifiedRow = unifiedRowMap.get(it.id) || (it.codigo ? unifiedRowMap.get(it.codigo) : undefined);
+      if (unifiedRow && unifiedRow.subItens && unifiedRow.subItens.length > 0) {
+        const totalDif = unifiedRow.totalDiferenca || 1;
+        unifiedRow.subItens.forEach(sub => {
+          const ratio = totalDif > 0 ? (sub.totalDiferenca / totalDif) : (1 / unifiedRow.subItens!.length);
+          rows.push([
+            sub.descricao,
+            toCsvNumber(it.valorTotalIntegral * ratio),
+            it.parcelas.toString(),
+            toCsvNumber(it.valorParcelaIntegral * ratio),
+            toCsvNumber(it.valorTotalProporcional * ratio),
+            toCsvNumber(it.valorParcelaProporcional * ratio),
+            toCsvNumber(it.totalGeral * ratio),
+            toCsvNumber(it.totalGeralParcelado * ratio)
+          ]);
+        });
+      } else {
+        rows.push([
+          it.descricao,
+          toCsvNumber(it.valorTotalIntegral),
+          it.parcelas.toString(),
+          toCsvNumber(it.valorParcelaIntegral),
+          toCsvNumber(it.valorTotalProporcional),
+          toCsvNumber(it.valorParcelaProporcional),
+          toCsvNumber(it.totalGeral),
+          toCsvNumber(it.totalGeralParcelado)
+        ]);
+      }
     });
 
     rows.push([

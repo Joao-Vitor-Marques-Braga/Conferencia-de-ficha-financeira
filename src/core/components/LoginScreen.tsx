@@ -14,7 +14,7 @@ import {
   Moon,
   Building2
 } from 'lucide-react';
-import { useAuth, INSTITUTIONAL_DOMAIN, isAllowedInstitutionalEmail } from '../context/AuthContext';
+import { useAuth, isAllowedInstitutionalEmail } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
 export const LoginScreen: React.FC = () => {

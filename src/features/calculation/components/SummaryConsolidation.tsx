@@ -88,8 +88,8 @@ export const SummaryConsolidation: React.FC<SummaryConsolidationProps> = ({
           </div>
         </div>
 
-        {/* Global Parcelas Quick Presets */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+        {/* Global Parcelas Quick Presets & Manual Input */}
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
           <span className="text-slate-600 dark:text-slate-400 font-bold flex items-center mr-1 transition-colors">
             <Split className="w-3.5 h-3.5 mr-1 text-amber-600 dark:text-[#ead04d]" /> Parcelar Todos em:
           </span>
@@ -105,6 +105,45 @@ export const SummaryConsolidation: React.FC<SummaryConsolidationProps> = ({
               {num}x
             </button>
           ))}
+
+          {/* Campo para digitar a quantidade de vezes manualmente */}
+          <div className="flex items-center gap-1 pl-1.5 border-l border-slate-300 dark:border-[#324f72]/60">
+            <div className="relative flex items-center">
+              <input
+                type="number"
+                min={1}
+                max={120}
+                placeholder="Ex: 36"
+                value={globalParcelas > 0 ? globalParcelas : ''}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  if (!isNaN(val)) {
+                    handleApplyGlobalParcelas(Math.max(1, Math.min(120, val)));
+                  } else {
+                    setGlobalParcelas(0);
+                  }
+                }}
+                onBlur={() => {
+                  if (!globalParcelas || globalParcelas < 1) {
+                    handleApplyGlobalParcelas(1);
+                  }
+                }}
+                className={`w-16 pr-4 pl-2 py-1 text-center font-black rounded-lg border text-xs transition-all ${
+                  ![1, 2, 3, 6, 10, 12, 24].includes(globalParcelas) && globalParcelas > 0
+                    ? 'bg-[#ea580c] dark:bg-[#f88543] text-white dark:text-slate-950 border-[#ea580c] dark:border-[#f88543] shadow-xs'
+                    : 'bg-white dark:bg-[#0b131e] text-slate-900 dark:text-white border-slate-300 dark:border-[#324f72] focus:border-[#ea580c] dark:focus:border-[#f88543]'
+                }`}
+                title="Digitar quantidade de parcelas manualmente"
+              />
+              <span className={`absolute right-1.5 text-[11px] font-black pointer-events-none ${
+                ![1, 2, 3, 6, 10, 12, 24].includes(globalParcelas) && globalParcelas > 0
+                  ? 'text-white/90 dark:text-slate-950/90'
+                  : 'text-slate-400 dark:text-slate-500'
+              }`}>
+                x
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 

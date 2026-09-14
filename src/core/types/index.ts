@@ -34,6 +34,16 @@ export interface UnifiedVerbaGroup {
   codigosOriginais: string[];
 }
 
+export interface SplitMonthConfig {
+  enabled: boolean;
+  data1?: string; // Ex: "2026-09-10" ou "10/09/2026"
+  dias1: number; // Ex: 10 dias
+  percentual1: number; // Ex: 6.12 (%)
+  data2?: string; // Ex: "2026-09-30" ou "30/09/2026"
+  dias2: number; // Ex: 20 dias
+  percentual2: number; // Ex: 12.24 (%)
+}
+
 export interface ProgressionParams {
   percentualProgressao: number; // Ex: 6.12 (%)
   letraOrigem?: string; // Letra atual de onde sai (ex: "E", "A")
@@ -54,6 +64,7 @@ export interface ProgressionParams {
   selectedVerbaCodes?: string[];
   unifiedVerbas?: UnifiedVerbaGroup[];
   percentuaisPorMes?: Record<string, number>; // Ex: { "05/2025": 5.0, "06/2026": 6.12 }
+  splitMonths?: Record<string, SplitMonthConfig>; // Desdobramento de dias e percentuais por competência
 }
 
 export interface MonthlyBreakdownDetail {
@@ -68,6 +79,7 @@ export interface MonthlyBreakdownDetail {
   fatorProporcional: number; // Ex: 0.5484 (17/31) ou 1.0 (30/30)
   percentualAplicado: number; // Ex: 54.84% ou 100%
   percentualReajuste?: number; // Percentual de progressão aplicado a este mês (ex: 5% ou 6.12%)
+  splitConfig?: SplitMonthConfig; // Configuração ativa de desdobramento de dias / múltiplos percentuais
   eventos: Array<{
     codigo: string;
     descricao: string;

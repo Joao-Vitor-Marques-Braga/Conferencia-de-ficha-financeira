@@ -52,8 +52,14 @@ export function calculateProgressionSummary(
   params: ProgressionParams,
   selectedCompetencias: string[]
 ): ProgressionSummary {
-  // 1. Filter active records strictly within selected competencies
-  const activeRecords = records.filter(r => selectedCompetencias.includes(r.competencia));
+  // 1. Filter active records strictly within selected competencies and sort chronologically
+  const activeRecords = records
+    .filter(r => selectedCompetencias.includes(r.competencia))
+    .sort((a, b) => {
+      const [ma, ya] = a.competencia.split('/').map(Number);
+      const [mb, yb] = b.competencia.split('/').map(Number);
+      return (ya * 100 + ma) - (yb * 100 + mb);
+    });
 
   if (activeRecords.length === 0) {
     return {
@@ -76,7 +82,6 @@ export function calculateProgressionSummary(
     };
   }
 
-  const progressionFactor = 1 + (params.percentualProgressao / 100);
   const selectedCodes = params.selectedVerbaCodes;
   const unifiedGroups = params.unifiedVerbas || [];
 
@@ -152,6 +157,13 @@ export function calculateProgressionSummary(
       }
     }
 
+    // Handle split month configuration (multiple periods/percentages within the month)
+    const split = params.splitMonths?.[rec.competencia];
+    if (split && split.enabled) {
+      diasDevidos = (split.dias1 ?? 0) + (split.dias2 ?? 0);
+      fator = diasBaseRateio > 0 ? (diasDevidos / diasBaseRateio) : 1.0;
+    }
+
     return {
       competencia: rec.competencia,
       ano,
@@ -183,13 +195,35 @@ export function calculateProgressionSummary(
     origemCodigos?: string[];
   }
 
+  // Running progression percentage carried forward chronologically across months
+  let runningProgressionPct = params.percentualProgressao;
+
   const monthlyBreakdown: MonthlyBreakdownDetail[] = activeRecords.map((rec, idx) => {
     const mp = monthProportions[idx];
 
-    const monthPct = (params.percentuaisPorMes && typeof params.percentuaisPorMes[rec.competencia] === 'number')
-      ? params.percentuaisPorMes[rec.competencia]
-      : params.percentualProgressao;
+    const split = params.splitMonths?.[rec.competencia];
+    const isSplitActive = Boolean(split && split.enabled && ((split.dias1 ?? 0) > 0 || (split.dias2 ?? 0) > 0));
+
+    // If an explicit override exists for this specific month, adopt it
+    if (params.percentuaisPorMes && typeof params.percentuaisPorMes[rec.competencia] === 'number') {
+      runningProgressionPct = params.percentuaisPorMes[rec.competencia];
+    }
+
+    const monthPct = runningProgressionPct;
     const monthProgressionFactor = 1 + (monthPct / 100);
+
+    const D = mp.diasBaseRateio > 0 ? mp.diasBaseRateio : 30;
+    const splitD1 = split?.dias1 ?? 0;
+    const splitP1 = split?.percentual1 ?? monthPct;
+    const splitD2 = split?.dias2 ?? 0;
+    const splitP2 = split?.percentual2 ?? monthPct;
+    const splitTotalDias = splitD1 + splitD2;
+    const splitAveragePct = splitTotalDias > 0 ? ((splitP1 * splitD1) + (splitP2 * splitD2)) / splitTotalDias : monthPct;
+
+    // When a split occurs in this month, the 2nd period percentage becomes the new progression rate for all subsequent months!
+    if (isSplitActive && typeof split?.percentual2 === 'number') {
+      runningProgressionPct = split.percentual2;
+    }
 
     // Filter events of this month strictly by active codes (selected codes or members of active unified groups)
     const filteredEvents = rec.eventos.filter(ev => isCodeActive(ev.codigo));
@@ -203,12 +237,28 @@ export function calculateProgressionSummary(
       if (matching.length > 0) {
         matching.forEach(ev => consumedCodes.add(ev.codigo));
         const l1Cheia = roundMoney(matching.reduce((sum, ev) => sum + ev.valor, 0));
-        const l2Cheia = roundMoney(l1Cheia * monthProgressionFactor);
-        const difCheia = roundMoney(l2Cheia - l1Cheia);
 
-        const l1Aplicada = roundMoney(l1Cheia * mp.fator);
-        const l2Aplicada = roundMoney(l2Cheia * mp.fator);
-        const difAplicada = roundMoney(difCheia * mp.fator);
+        let l2Cheia: number;
+        let difCheia: number;
+        let l1Aplicada: number;
+        let l2Aplicada: number;
+        let difAplicada: number;
+
+        if (isSplitActive) {
+          const dif1 = roundMoney(l1Cheia * (splitP1 / 100) * (splitD1 / D));
+          const dif2 = roundMoney(l1Cheia * (splitP2 / 100) * (splitD2 / D));
+          difAplicada = roundMoney(dif1 + dif2);
+          l1Aplicada = roundMoney(l1Cheia * (splitTotalDias / D));
+          l2Aplicada = roundMoney(l1Aplicada + difAplicada);
+          l2Cheia = roundMoney(l1Cheia * (1 + (splitAveragePct / 100)));
+          difCheia = roundMoney(l2Cheia - l1Cheia);
+        } else {
+          l2Cheia = roundMoney(l1Cheia * monthProgressionFactor);
+          difCheia = roundMoney(l2Cheia - l1Cheia);
+          l1Aplicada = roundMoney(l1Cheia * mp.fator);
+          l2Aplicada = roundMoney(l2Cheia * mp.fator);
+          difAplicada = roundMoney(difCheia * mp.fator);
+        }
 
         monthEventList.push({
           codigo: group.id,
@@ -248,25 +298,45 @@ export function calculateProgressionSummary(
       const l1Cheia = ev.valor;
       let l2Cheia = l1Cheia;
       let difCheia = 0;
+      let l1Aplicada = 0;
+      let l2Aplicada = 0;
+      let difAplicada = 0;
 
-      if (isSalarioBase) {
-        l2Cheia = roundMoney(l1Cheia * monthProgressionFactor);
-        difCheia = roundMoney(l2Cheia - l1Cheia);
-      } else if (isInsalubridade) {
-        l2Cheia = l1Cheia; // Fixo, não reajusta
-        difCheia = 0;
-      } else if (isFerias) {
-        // Férias 1/3 (verba 163) é reajustada da mesma forma que qualquer outra verba: o mesmo % de progressão sobre o valor atual
-        l2Cheia = roundMoney(l1Cheia * monthProgressionFactor);
-        difCheia = roundMoney(l2Cheia - l1Cheia);
+      if (isSplitActive) {
+        if (isInsalubridade) {
+          l1Aplicada = roundMoney(l1Cheia * (splitTotalDias / D));
+          l2Aplicada = l1Aplicada;
+          difAplicada = 0;
+          l2Cheia = l1Cheia;
+          difCheia = 0;
+        } else {
+          const dif1 = roundMoney(l1Cheia * (splitP1 / 100) * (splitD1 / D));
+          const dif2 = roundMoney(l1Cheia * (splitP2 / 100) * (splitD2 / D));
+          difAplicada = roundMoney(dif1 + dif2);
+          l1Aplicada = roundMoney(l1Cheia * (splitTotalDias / D));
+          l2Aplicada = roundMoney(l1Aplicada + difAplicada);
+          l2Cheia = roundMoney(l1Cheia * (1 + (splitAveragePct / 100)));
+          difCheia = roundMoney(l2Cheia - l1Cheia);
+        }
       } else {
-        l2Cheia = roundMoney(l1Cheia * monthProgressionFactor);
-        difCheia = roundMoney(l2Cheia - l1Cheia);
-      }
+        if (isSalarioBase) {
+          l2Cheia = roundMoney(l1Cheia * monthProgressionFactor);
+          difCheia = roundMoney(l2Cheia - l1Cheia);
+        } else if (isInsalubridade) {
+          l2Cheia = l1Cheia; // Fixo, não reajusta
+          difCheia = 0;
+        } else if (isFerias) {
+          l2Cheia = roundMoney(l1Cheia * monthProgressionFactor);
+          difCheia = roundMoney(l2Cheia - l1Cheia);
+        } else {
+          l2Cheia = roundMoney(l1Cheia * monthProgressionFactor);
+          difCheia = roundMoney(l2Cheia - l1Cheia);
+        }
 
-      const l1Aplicada = roundMoney(l1Cheia * mp.fator);
-      const l2Aplicada = roundMoney(l2Cheia * mp.fator);
-      const difAplicada = roundMoney(difCheia * mp.fator);
+        l1Aplicada = roundMoney(l1Cheia * mp.fator);
+        l2Aplicada = roundMoney(l2Cheia * mp.fator);
+        difAplicada = roundMoney(difCheia * mp.fator);
+      }
 
       monthEventList.push({
         codigo: ev.codigo,
@@ -297,10 +367,11 @@ export function calculateProgressionSummary(
       mesNome: mp.mesNome,
       diasNoMes: mp.diasNoMes,
       diasBaseRateio: mp.diasBaseRateio,
-      diasDevidos: mp.diasDevidos,
-      fatorProporcional: mp.fator,
-      percentualAplicado: roundMoney(mp.fator * 100),
-      percentualReajuste: monthPct,
+      diasDevidos: isSplitActive ? splitTotalDias : mp.diasDevidos,
+      fatorProporcional: isSplitActive ? (splitTotalDias / D) : mp.fator,
+      percentualAplicado: roundMoney((isSplitActive ? (splitTotalDias / D) : mp.fator) * 100),
+      percentualReajuste: isSplitActive ? roundMoney(splitAveragePct) : monthPct,
+      splitConfig: isSplitActive ? split : undefined,
       eventos: monthEventList.map(e => ({
         codigo: e.codigo,
         descricao: e.descricao,
@@ -356,8 +427,9 @@ export function calculateProgressionSummary(
         matching.forEach(ev => consumed.add(ev.codigo));
         const evMb = mb.eventos.find(e => e.codigo === group.id);
         const difMes = evMb?.diferenca ?? 0;
+        const curProgFactor = 1 + ((mb.percentualReajuste ?? params.percentualProgressao) / 100);
         const l1Cheia = roundMoney(matching.reduce((sum, ev) => sum + ev.valor, 0));
-        const l2Cheia = roundMoney(l1Cheia * progressionFactor);
+        const l2Cheia = roundMoney(l1Cheia * curProgFactor);
 
         let existing = eventAggregationMap.get(group.id);
         if (existing) {
@@ -385,8 +457,20 @@ export function calculateProgressionSummary(
         // Aggregate individual sub-items for this unified group
         matching.forEach(subEv => {
           const subL1 = subEv.valor;
-          const subL2 = roundMoney(subL1 * progressionFactor);
-          const subDif = roundMoney((subL2 - subL1) * mp.fator);
+          let subDif: number;
+          let subL2: number;
+
+          if (mb.splitConfig && mb.splitConfig.enabled) {
+            const split = mb.splitConfig;
+            const D = (mb.diasBaseRateio && mb.diasBaseRateio > 0) ? mb.diasBaseRateio : 30;
+            const subDif1 = roundMoney(subL1 * ((split.percentual1 ?? params.percentualProgressao) / 100) * ((split.dias1 ?? 0) / D));
+            const subDif2 = roundMoney(subL1 * ((split.percentual2 ?? params.percentualProgressao) / 100) * ((split.dias2 ?? 0) / D));
+            subDif = roundMoney(subDif1 + subDif2);
+            subL2 = roundMoney(subL1 * curProgFactor);
+          } else {
+            subL2 = roundMoney(subL1 * curProgFactor);
+            subDif = roundMoney((subL2 - subL1) * mp.fator);
+          }
 
           const subItem = existing!.subItensMap!.get(subEv.codigo);
           if (subItem) {
@@ -427,10 +511,11 @@ export function calculateProgressionSummary(
       const evMb = mb.eventos.find(e => e.codigo === ev.codigo);
       const difMes = evMb?.diferenca ?? 0;
 
+      const curProgFactor = 1 + ((mb.percentualReajuste ?? params.percentualProgressao) / 100);
       const l1Cheia = ev.valor;
       const l2Cheia = isInsalubridade
         ? l1Cheia
-        : roundMoney(l1Cheia * progressionFactor);
+        : roundMoney(l1Cheia * curProgFactor);
 
       const existing = eventAggregationMap.get(ev.codigo);
       if (existing) {

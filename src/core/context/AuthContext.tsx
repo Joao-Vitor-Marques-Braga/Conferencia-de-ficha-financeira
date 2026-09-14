@@ -6,6 +6,7 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
+  sendEmailVerification,
   updateProfile
 } from 'firebase/auth';
 import { auth, isFirebaseConfigured, getFirebaseErrorMessage } from '../config/firebase';
@@ -22,6 +23,8 @@ interface AuthContextType {
   isConfigured: boolean;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   registerWithEmail: (email: string, pass: string, name: string) => Promise<void>;
+  resendVerificationEmail: () => Promise<void>;
+  checkEmailVerification: () => Promise<boolean>;
   logout: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
 }
@@ -72,11 +75,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!auth) throw new Error('O Firebase não está configurado.');
     try {
       const cred = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
-      if (name.trim() && cred.user) {
-        await updateProfile(cred.user, { displayName: name.trim() });
+      if (cred.user) {
+        if (name.trim()) {
+          await updateProfile(cred.user, { displayName: name.trim() });
+        }
+        // Enviar email de verificação de conta institucional
+        await sendEmailVerification(cred.user);
       }
     } catch (err) {
       throw new Error(getFirebaseErrorMessage(err));
+    }
+  };
+
+  const resendVerificationEmail = async () => {
+    if (!auth || !auth.currentUser) throw new Error('Nenhum usuário logado.');
+    try {
+      await sendEmailVerification(auth.currentUser);
+    } catch (err) {
+      throw new Error(getFirebaseErrorMessage(err));
+    }
+  };
+
+  const checkEmailVerification = async (): Promise<boolean> => {
+    if (!auth || !auth.currentUser) return false;
+    try {
+      await auth.currentUser.reload();
+      const verified = auth.currentUser.emailVerified;
+      if (verified) {
+        setUser({ ...auth.currentUser });
+      }
+      return verified;
+    } catch (err) {
+      console.error('[AuthContext] Erro ao verificar status do email:', err);
+      return false;
     }
   };
 
@@ -111,6 +142,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isConfigured: isFirebaseConfigured,
         loginWithEmail,
         registerWithEmail,
+        resendVerificationEmail,
+        checkEmailVerification,
         logout,
         sendPasswordReset
       }}

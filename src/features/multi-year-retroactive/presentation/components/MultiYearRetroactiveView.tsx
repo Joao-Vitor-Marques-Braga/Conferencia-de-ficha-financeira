@@ -2,16 +2,19 @@ import React, { useState } from 'react';
 import { CalendarRange, CheckCircle2, ChevronDown, ChevronRight, Layers, CornerDownRight } from 'lucide-react';
 import { formatCurrency, formatPercent } from '../../../../core/utils/formatters';
 import type { MultiYearConsolidatedSummary } from '../../domain/types';
+import type { SplitMonthConfig } from '../../../../core/types';
 import { MonthlyBreakdownAccordion } from '../../../calculation/components/MonthlyBreakdownAccordion';
 
 interface MultiYearRetroactiveViewProps {
   summary: MultiYearConsolidatedSummary;
   onMonthPercentChange?: (competencia: string, newPercent: number) => void;
+  onSplitMonthChange?: (competencia: string, config: SplitMonthConfig | null) => void;
 }
 
 export const MultiYearRetroactiveView: React.FC<MultiYearRetroactiveViewProps> = ({
   summary,
-  onMonthPercentChange
+  onMonthPercentChange,
+  onSplitMonthChange
 }) => {
   const [activeTab, setActiveTab] = useState<'CONSOLIDADO' | 'ANOS'>('CONSOLIDADO');
   const [expandedYears, setExpandedYears] = useState<Record<number, boolean>>({});
@@ -383,6 +386,7 @@ export const MultiYearRetroactiveView: React.FC<MultiYearRetroactiveViewProps> =
                       <MonthlyBreakdownAccordion
                         yearlyBreakdown={entry.summary.yearlyBreakdown}
                         onMonthPercentChange={onMonthPercentChange}
+                        onSplitMonthChange={onSplitMonthChange}
                       />
                     </div>
                   </div>

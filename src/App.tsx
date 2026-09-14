@@ -18,10 +18,11 @@ import { exportProgressionPdfReport } from './features/pdf-exporter/exportProgre
 import { exportConsolidatedSpreadsheet, exportDetailedMonthlySpreadsheet } from './features/spreadsheet-exporter/exportSpreadsheet';
 import { storageService } from './core/services/storageService';
 import { roundMoney } from './core/utils/math';
-import type { ParseResult, ProgressionParams, CalculatedEventRow, SavedCalculation, UnifiedVerbaGroup } from './core/types';
+import type { ParseResult, ProgressionParams, CalculatedEventRow, SavedCalculation, UnifiedVerbaGroup, SplitMonthConfig } from './core/types';
 import { Download, FileCheck, ShieldCheck, Save, FileSpreadsheet, CheckCircle2, Filter, Loader2 } from 'lucide-react';
 import { useAuth } from './core/context/AuthContext';
 import { LoginScreen } from './core/components/LoginScreen';
+import { EmailVerificationScreen } from './core/components/EmailVerificationScreen';
 
 export function App() {
   const { user, loading } = useAuth();
@@ -305,6 +306,43 @@ export function App() {
     }));
   };
 
+  const handleSplitMonthChange = (competencia: string, config: SplitMonthConfig | null) => {
+    setParams(prev => {
+      const updated = { ...(prev.splitMonths || {}) };
+      if (config) {
+        updated[competencia] = config;
+      } else {
+        delete updated[competencia];
+      }
+
+      // When split changes, clear any explicit overrides for subsequent months
+      // so they automatically follow the new progression rate from period 2!
+      let updatedPctPorMes = prev.percentuaisPorMes;
+      if (prev.percentuaisPorMes) {
+        const [compM, compY] = competencia.split('/').map(Number);
+        const compOrder = compY * 100 + compM;
+        const filteredPct = { ...prev.percentuaisPorMes };
+        let changed = false;
+        Object.keys(filteredPct).forEach(c => {
+          const [m, y] = c.split('/').map(Number);
+          if (y * 100 + m > compOrder) {
+            delete filteredPct[c];
+            changed = true;
+          }
+        });
+        if (changed) {
+          updatedPctPorMes = filteredPct;
+        }
+      }
+
+      return {
+        ...prev,
+        splitMonths: updated,
+        percentuaisPorMes: updatedPctPorMes
+      };
+    });
+  };
+
   // Save active calculation into localStorage
   const handleSaveCalculation = useCallback(() => {
     if (!summary || !parseResult) {
@@ -408,6 +446,10 @@ export function App() {
 
   if (!user) {
     return <LoginScreen />;
+  }
+
+  if (!user.emailVerified) {
+    return <EmailVerificationScreen />;
   }
 
   return (
@@ -675,6 +717,7 @@ export function App() {
                   <MonthlyBreakdownAccordion
                     yearlyBreakdown={summary.yearlyBreakdown}
                     onMonthPercentChange={handleMonthPercentChange}
+                    onSplitMonthChange={handleSplitMonthChange}
                   />
                 )}
 

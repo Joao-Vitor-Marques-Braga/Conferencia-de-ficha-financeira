@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import type { YearlyBreakdownGroup } from '../../../core/types';
+import type { YearlyBreakdownGroup, SplitMonthConfig } from '../../../core/types';
 import { formatCurrency, formatPercent } from '../../../core/utils/formatters';
-import { ChevronDown, ChevronUp, Calendar, Clock } from 'lucide-react';
+import { ChevronDown, ChevronUp, Calendar, Clock, Unlock, Lock } from 'lucide-react';
 
 interface MonthlyBreakdownAccordionProps {
   yearlyBreakdown: YearlyBreakdownGroup[];
   onMonthPercentChange?: (competencia: string, newPercent: number) => void;
+  onSplitMonthChange?: (competencia: string, config: SplitMonthConfig | null) => void;
 }
 
 export const MonthlyBreakdownAccordion: React.FC<MonthlyBreakdownAccordionProps> = ({
   yearlyBreakdown,
-  onMonthPercentChange
+  onMonthPercentChange,
+  onSplitMonthChange
 }) => {
   // All years expanded by default
   const [expandedYears, setExpandedYears] = useState<Record<number, boolean>>(() => {
@@ -125,44 +127,216 @@ export const MonthlyBreakdownAccordion: React.FC<MonthlyBreakdownAccordionProps>
                               </span>
                               <strong className="text-slate-900 dark:text-white text-xs font-bold">{month.mesNome}</strong>
 
-                              {/* Editable Month-Specific Progression Percentage */}
-                              <div
-                                onClick={(e) => e.stopPropagation()}
-                                className="flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-white dark:bg-[#0b131e] border border-slate-300 dark:border-[#324f72] shadow-2xs"
-                                title={`Alterar percentual de progressão de ${month.mesNome}/${month.ano}`}
-                              >
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  max="100"
-                                  value={month.percentualReajuste ?? 5}
-                                  onChange={(e) => {
-                                    const val = parseFloat(e.target.value);
-                                    if (!isNaN(val) && onMonthPercentChange) {
-                                      onMonthPercentChange(month.competencia, val);
-                                    }
-                                  }}
-                                  className="w-14 bg-transparent text-right font-mono font-black text-amber-800 dark:text-[#ead04d] focus:outline-none focus:ring-1 focus:ring-amber-500 rounded px-0.5 text-xs"
-                                />
-                                <span className="text-xs text-amber-800 dark:text-[#ead04d] font-black">%</span>
-                              </div>
+                              {!month.splitConfig?.enabled ? (
+                                <>
+                                  {/* Editable Month-Specific Progression Percentage */}
+                                  <div
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-white dark:bg-[#0b131e] border border-slate-300 dark:border-[#324f72] shadow-2xs"
+                                    title={`Alterar percentual de progressão de ${month.mesNome}/${month.ano}`}
+                                  >
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      max="100"
+                                      value={month.percentualReajuste ?? 5}
+                                      onChange={(e) => {
+                                        const val = parseFloat(e.target.value);
+                                        if (!isNaN(val) && onMonthPercentChange) {
+                                          onMonthPercentChange(month.competencia, val);
+                                        }
+                                      }}
+                                      className="w-14 bg-transparent text-right font-mono font-black text-amber-800 dark:text-[#ead04d] focus:outline-none focus:ring-1 focus:ring-amber-500 rounded px-0.5 text-xs"
+                                    />
+                                    <span className="text-xs text-amber-800 dark:text-[#ead04d] font-black">%</span>
+                                  </div>
 
-                              {month.situacaoFuncional && (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 dark:bg-[#ead04d]/20 dark:text-[#ead04d] dark:border-[#ead04d]/40">
-                                  {month.situacaoFuncional === 'Férias' ? 'Férias' : `${month.situacaoFuncional}`}
-                                </span>
-                              )}
+                                  {month.situacaoFuncional && (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 dark:bg-[#ead04d]/20 dark:text-[#ead04d] dark:border-[#ead04d]/40">
+                                      {month.situacaoFuncional === 'Férias' ? 'Férias' : `${month.situacaoFuncional}`}
+                                    </span>
+                                  )}
 
-                              {isProportional ? (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-orange-100 text-orange-800 border border-orange-300 dark:bg-[#f88543]/20 dark:text-[#f88543] dark:border-[#f88543]/40 flex items-center">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  Rateio: {month.diasDevidos}/{month.diasBaseRateio} dias ({formatPercent(month.percentualAplicado)})
-                                </span>
+                                  {isProportional ? (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-orange-100 text-orange-800 border border-orange-300 dark:bg-[#f88543]/20 dark:text-[#f88543] dark:border-[#f88543]/40 flex items-center">
+                                      <Clock className="w-3 h-3 mr-1" />
+                                      Rateio: {month.diasDevidos}/{month.diasBaseRateio} dias ({formatPercent(month.percentualAplicado)})
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-[#008d50]/20 dark:text-[#008d50] dark:border-[#008d50]/30">
+                                      Integral (100% • {month.diasNoMes} dias)
+                                    </span>
+                                  )}
+
+                                  {onSplitMonthChange && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const [mStr, yStr] = month.competencia.split('/');
+                                        const currentPct = month.percentualReajuste ?? 6.12;
+                                        const defaultData1 = `${yStr}-${mStr.padStart(2, '0')}-10`;
+                                        const lastDay = month.diasNoMes;
+                                        const defaultData2 = `${yStr}-${mStr.padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+                                        const defaultDias1 = 10;
+                                        const baseRateio = month.diasBaseRateio || 30;
+                                        const defaultDias2 = Math.max(0, baseRateio - 10);
+
+                                        onSplitMonthChange(month.competencia, {
+                                          enabled: true,
+                                          data1: defaultData1,
+                                          dias1: defaultDias1,
+                                          percentual1: currentPct,
+                                          data2: defaultData2,
+                                          dias2: defaultDias2,
+                                          percentual2: currentPct
+                                        });
+                                      }}
+                                      className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-200/80 hover:bg-amber-100 dark:bg-[#1b2a3f] dark:hover:bg-amber-950/40 text-slate-700 dark:text-slate-300 hover:text-amber-800 dark:hover:text-amber-300 border border-slate-300 dark:border-[#324f72] transition-colors cursor-pointer"
+                                      title="Desbloquear e desdobrar percentuais neste mês (ex: progressão de 6,12% até dia 10 e 12,24% depois)"
+                                    >
+                                      <Unlock className="w-3 h-3 text-amber-600 dark:text-amber-400 mr-0.5" />
+                                      <span>Desbloquear</span>
+                                    </button>
+                                  )}
+                                </>
                               ) : (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-[#008d50]/20 dark:text-[#008d50] dark:border-[#008d50]/30">
-                                  Integral (100% • {month.diasNoMes} dias)
-                                </span>
+                                <>
+                                  {month.situacaoFuncional && (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 dark:bg-[#ead04d]/20 dark:text-[#ead04d] dark:border-[#ead04d]/40">
+                                      {month.situacaoFuncional === 'Férias' ? 'Férias' : `${month.situacaoFuncional}`}
+                                    </span>
+                                  )}
+
+                                  {/* Split Month Configuration Inputs */}
+                                  <div
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="flex flex-wrap items-center gap-2 p-1.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-600/50 text-xs shadow-2xs"
+                                  >
+                                    {/* 1º Período */}
+                                    <div className="flex items-center gap-1.5 bg-white dark:bg-[#0b131e] px-2.5 py-1 rounded-lg border border-amber-200 dark:border-amber-900/60">
+                                      <span className="text-[11px] font-bold text-amber-900 dark:text-amber-400">
+                                        1° Período 01 de {month.mesNome} até
+                                      </span>
+                                      
+                                      {/* Campo de data para selecionar */}
+                                      <input
+                                        type="date"
+                                        value={month.splitConfig.data1 || ''}
+                                        onChange={(e) => {
+                                          const newData1 = e.target.value;
+                                          let newDias1 = 10;
+                                          let newDias2 = 20;
+                                          if (newData1) {
+                                            const parts = newData1.split('-');
+                                            if (parts.length === 3) {
+                                              const d = parseInt(parts[2], 10);
+                                              if (!isNaN(d) && d >= 1 && d <= 31) {
+                                                newDias1 = d;
+                                                const baseDiv = month.diasBaseRateio || 30;
+                                                newDias2 = Math.max(0, baseDiv - d);
+                                              }
+                                            }
+                                          }
+                                          const [mStr, yStr] = month.competencia.split('/');
+                                          const defaultData2 = `${yStr}-${mStr.padStart(2, '0')}-30`;
+                                          if (onSplitMonthChange) {
+                                            onSplitMonthChange(month.competencia, {
+                                              ...month.splitConfig!,
+                                              data1: newData1,
+                                              dias1: newDias1,
+                                              data2: defaultData2,
+                                              dias2: newDias2
+                                            });
+                                          }
+                                        }}
+                                        className="px-1.5 py-0.5 text-[11px] font-mono rounded border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#132030] text-slate-900 dark:text-white focus:ring-1 focus:ring-amber-500"
+                                      />
+
+                                      {/* Porcentagem 1 */}
+                                      <div className="flex items-center space-x-0.5" title="Percentual do 1º período">
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          max="100"
+                                          value={month.splitConfig.percentual1}
+                                          onChange={(e) => {
+                                            const val = parseFloat(e.target.value);
+                                            if (!isNaN(val) && onSplitMonthChange) {
+                                              onSplitMonthChange(month.competencia, {
+                                                ...month.splitConfig!,
+                                                percentual1: val
+                                              });
+                                            }
+                                          }}
+                                          className="w-14 px-1 py-0.5 text-right font-mono font-black text-[11px] rounded border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#132030] text-amber-700 dark:text-[#ead04d] focus:ring-1 focus:ring-amber-500"
+                                        />
+                                        <span className="text-[11px] text-amber-700 dark:text-[#ead04d] font-bold">%</span>
+                                      </div>
+                                    </div>
+
+                                    <span className="text-slate-400 dark:text-slate-500 font-bold text-[11px]">➜</span>
+
+                                    {/* 2º Período: de data selecionada até 30 de mês */}
+                                    {(() => {
+                                      let dataFmt = '';
+                                      if (month.splitConfig.data1) {
+                                        const parts = month.splitConfig.data1.split('-');
+                                        if (parts.length === 3) {
+                                          dataFmt = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                                        }
+                                      }
+                                      const labelData = dataFmt || `${String(month.splitConfig.dias1 || 10).padStart(2, '0')}/${month.competencia}`;
+                                      return (
+                                        <div className="flex items-center gap-1.5 bg-white dark:bg-[#0b131e] px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-900/60">
+                                          <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-400">
+                                            2° Período de {labelData} até 30 de {month.mesNome}
+                                          </span>
+
+                                          {/* Porcentagem 2 */}
+                                          <div className="flex items-center space-x-0.5" title="Percentual do 2º período">
+                                            <input
+                                              type="number"
+                                              step="0.01"
+                                              min="0"
+                                              max="100"
+                                              value={month.splitConfig.percentual2}
+                                              onChange={(e) => {
+                                                const val = parseFloat(e.target.value);
+                                                if (!isNaN(val) && onSplitMonthChange) {
+                                                  onSplitMonthChange(month.competencia, {
+                                                    ...month.splitConfig!,
+                                                    percentual2: val
+                                                  });
+                                                }
+                                              }}
+                                              className="w-14 px-1 py-0.5 text-right font-mono font-black text-[11px] rounded border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#132030] text-emerald-700 dark:text-emerald-400 focus:ring-1 focus:ring-emerald-500"
+                                            />
+                                            <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold">%</span>
+                                          </div>
+                                        </div>
+                                      );
+                                    })()}
+
+                                    {/* Lock / Revert Button */}
+                                    {onSplitMonthChange && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onSplitMonthChange(month.competencia, null);
+                                        }}
+                                        className="inline-flex items-center space-x-1 px-2 py-1 rounded text-[10px] font-semibold bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/50 dark:hover:bg-rose-900/70 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-900/60 transition-colors cursor-pointer"
+                                        title="Bloquear e voltar para apuração mensal única"
+                                      >
+                                        <Lock className="w-3 h-3 mr-0.5" />
+                                        <span>Bloquear</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                </>
                               )}
                             </div>
 
@@ -184,6 +358,16 @@ export const MonthlyBreakdownAccordion: React.FC<MonthlyBreakdownAccordionProps>
                           {/* Month Expanded Details Table */}
                           {isMonthExpanded && (
                             <div className="p-3 overflow-x-auto text-[11px]">
+                              {month.splitConfig?.enabled && (
+                                <div className="mb-2.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-400/30 text-amber-900 dark:text-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px]">
+                                  <span>
+                                    <strong className="font-bold">Desdobramento Ativo:</strong> 1º Período ({month.splitConfig.dias1} dias a {month.splitConfig.percentual1}%) + 2º Período ({month.splitConfig.dias2} dias a {month.splitConfig.percentual2}%)
+                                  </span>
+                                  <span className="font-mono font-black text-amber-800 dark:text-[#ead04d]">
+                                    Média Ponderada: {month.percentualReajuste}%
+                                  </span>
+                                </div>
+                              )}
                               <table className="w-full text-left border-collapse">
                                 <thead>
                                   <tr className="text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-[#324f72]/40 text-[10px] uppercase font-bold">

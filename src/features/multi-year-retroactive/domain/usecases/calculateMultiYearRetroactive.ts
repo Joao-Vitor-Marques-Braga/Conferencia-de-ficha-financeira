@@ -24,6 +24,8 @@ export function calculateMultiYearRetroactive(
     return consolidateYearlyResults([], params, serverInfo);
   }
 
+  let currentRunningPct = params.percentualProgressao;
+
   // 2. Execute single-year engine for each partition
   const yearlySummaries = partitions.map((partition, idx) => {
     // Initial partial-days rateio only applies to the very first month of the overall period
@@ -31,6 +33,7 @@ export function calculateMultiYearRetroactive(
 
     const paramsForYear = {
       ...params,
+      percentualProgressao: currentRunningPct,
       mesInicial: partition.competencias[0],
       mesFinal: partition.competencias[partition.competencias.length - 1],
       diasRetroativos: isFirstYear ? (params.diasRetroativos ?? 30) : 30
@@ -41,6 +44,14 @@ export function calculateMultiYearRetroactive(
       paramsForYear,
       partition.competencias
     );
+
+    // Carry forward the active progression percentage to subsequent years (e.g. following a split-month rate increase)
+    if (summary.monthlyBreakdown && summary.monthlyBreakdown.length > 0) {
+      const lastMonth = summary.monthlyBreakdown[summary.monthlyBreakdown.length - 1];
+      if (typeof lastMonth.percentualReajuste === 'number') {
+        currentRunningPct = lastMonth.percentualReajuste;
+      }
+    }
 
     if (serverInfo) {
       summary.server = { ...summary.server, ...serverInfo };

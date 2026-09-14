@@ -95,7 +95,8 @@ function extractServerMetadata(text: string): ServerInfo {
   const nomeMatch = text.match(/(?:Nome|Servidor|Funcion[áa]rio)\s*[:\.-]?\s*([A-Z\sÁÉÍÓÚÂÊÔÃÕÇ]{4,60})/i) ||
     text.match(/Ficha Financeira.*?\n\s*([A-Z\sÁÉÍÓÚÂÊÔÃÕÇ]{4,60})/i);
   const cargoMatch = text.match(/(?:Cargo|Fun[çc][ãa]o)\s*[:\.-]?\s*([A-Z0-9\sÁÉÍÓÚ\-\/]{3,60})/i);
-  const cpfMatch = text.match(/\b\d{3}\.\d{3}\.\d{3}\-\d{2}\b/);
+  const cpfMatch = text.match(/(?:CPF)\s*[:\.-]?\s*(\d{3}\.?\d{3}\.?\d{3}\-?\d{2}|\d{11})/i) ||
+    text.match(/\b\d{3}\.\d{3}\.\d{3}\-\d{2}\b/);
   const orgaoMatch = text.match(/(Fundo Municipal de Sa[úu]de|Prefeitura Municipal de Rio Verde|FMS|FMC|Prefeitura|Fundo Municipal de Educa[çc][ãa]o|Fund\.\s*de\s*Man)/i);
   const admissaoMatch = text.match(/(?:Admiss[ãa]o|Data Admiss[ãa]o)\s*[:\.-]?\s*(\d{2}\/\d{2}\/\d{4})/i);
 
@@ -110,11 +111,16 @@ function extractServerMetadata(text: string): ServerInfo {
   const cleanMatricula = matriculaMatch ? matriculaMatch[1].trim() : '104859-1';
   const cleanOrgao = orgaoMatch ? orgaoMatch[1].toUpperCase() : 'PREFEITURA MUNICIPAL DE RIO VERDE - GO / CENTI';
 
+  let cleanCpf = cpfMatch ? cpfMatch[1] || cpfMatch[0] : undefined;
+  if (cleanCpf && cleanCpf.length === 11 && !cleanCpf.includes('.')) {
+    cleanCpf = `${cleanCpf.slice(0, 3)}.${cleanCpf.slice(3, 6)}.${cleanCpf.slice(6, 9)}-${cleanCpf.slice(9)}`;
+  }
+
   return {
     nome: cleanNome.replace(/\s+/g, ' '),
     matricula: cleanMatricula,
     cargo: cleanCargo.replace(/\s+/g, ' '),
-    cpf: cpfMatch ? cpfMatch[0] : undefined,
+    cpf: cleanCpf,
     orgao: cleanOrgao,
     admissao: admissaoMatch ? admissaoMatch[1] : '01/01/2020'
   };
@@ -124,17 +130,13 @@ function extractMonthlyRecords(
   pagesItems: PositionedItem[][],
   fullText: string
 ): { records: MonthlyRecord[]; competencias: string[] } {
-  const anoMatch = fullText.match(/(?:Exerc[íi]cio|Ano|Compet[êe]ncia)\s*[:\.-]?\s*(\d{4})/i) ||
+  const globalAnoMatch = fullText.match(/(?:Exerc[íi]cio|Ano|Compet[êe]ncia)\s*[:\.-]?\s*(\d{4})/i) ||
     fullText.match(/\b(202[0-9])\b/);
-  const anoPadrao = anoMatch ? parseInt(anoMatch[1], 10) : new Date().getFullYear();
+  const anoPadrao = globalAnoMatch ? parseInt(globalAnoMatch[1], 10) : new Date().getFullYear();
 
-  // Initialize events map per month (1 to 12)
-  const eventsByMonth = new Map<number, ParsedEvent[]>();
-  for (let m = 1; m <= 12; m++) {
-    eventsByMonth.set(m, []);
-  }
-
-  const allActiveMonths = new Set<number>();
+  let lastDetectedYear = anoPadrao;
+  const eventsByComp = new Map<string, ParsedEvent[]>(); // key: "YYYY-MM" -> ParsedEvent[]
+  const activeMonthsPerYear = new Map<number, Set<number>>(); // year -> Set<month>
 
   // Process each page independently to eliminate cross-page coordinate collisions
   pagesItems.forEach(pageItems => {
@@ -146,7 +148,7 @@ function extractMonthlyRecords(
         it.text.toLowerCase() === nomeMes.toLowerCase() ||
         (nomeMes === 'Março' && it.text.toLowerCase().startsWith('mar'))
       );
-      if (headerItem) {
+      if (headerItem && headerItem.y > 200) {
         monthHeaderPositions.push({
           mes: idx + 1,
           nome: nomeMes,
@@ -155,8 +157,10 @@ function extractMonthlyRecords(
       }
     });
 
+    // If no month headers found, this is a non-monthly page (e.g. Movimentações / Férias), skip it
+    if (monthHeaderPositions.length === 0) return;
+
     monthHeaderPositions.sort((a, b) => a.x - b.x);
-    monthHeaderPositions.forEach(h => allActiveMonths.add(h.mes));
 
     // 2. Group items on THIS page into visual rows by Y coordinate with 3px tolerance
     const rowMap = new Map<number, PositionedItem[]>();
@@ -174,7 +178,27 @@ function extractMonthlyRecords(
       rowMap.set(targetKey, existing);
     });
 
+    const sortedYKeys = Array.from(rowMap.keys()).sort((a, b) => b - a);
+    const pageLines = sortedYKeys.map(y => {
+      const rowItems = rowMap.get(y) || [];
+      rowItems.sort((a, b) => a.x - b.x);
+      return rowItems.map(i => i.text).join(' ');
+    });
+
+    // Detect year on this page (e.g. "Rendimentos: 2024", "Exercício: 2024", etc.)
+    const topLines = pageLines.slice(0, 15).join(' ');
+    const pageYearMatch = topLines.match(/(?:Rendimentos|Exerc[íi]cio|Ano|Compet[êe]ncia)\s*[:\.-]?\s*(20[12]\d)/i) ||
+                          topLines.match(/\b(202[0-9])\b/);
+    const pageYear = pageYearMatch ? parseInt(pageYearMatch[1], 10) : lastDetectedYear;
+    lastDetectedYear = pageYear;
+
+    if (!activeMonthsPerYear.has(pageYear)) {
+      activeMonthsPerYear.set(pageYear, new Set<number>());
+    }
+
     // 3. Process visual rows for this page
+    const firstMonthX = monthHeaderPositions[0]?.x || 145;
+
     rowMap.forEach((rowItems) => {
       rowItems.sort((a, b) => a.x - b.x);
       const rowText = rowItems.map(i => i.text).join(' ');
@@ -193,9 +217,6 @@ function extractMonthlyRecords(
       const classification = classifyEventRubric(eventCode, rawDesc, rowText);
 
       // Separate Event Label (left items) from data columns (items near/under month columns)
-      const firstMonthX = monthHeaderPositions[0]?.x || 145;
-
-      // Extract description from the left items
       const labelItems = rowItems.filter(it => it.x < firstMonthX - 25);
       let rowLabel = labelItems.map(i => i.text).join(' ').trim();
       const descMatch = rowLabel.match(/(?:^|\s)\d{1,4}\s*[-–]\s*(.+)$/);
@@ -206,13 +227,15 @@ function extractMonthlyRecords(
       const cellItems = rowItems.filter(it => it.x >= firstMonthX - 25);
       if (cellItems.length === 0) return;
 
-      // Distribute cell items into each month column (12 monthly grid slots of 50px)
-      for (let m = 1; m <= 12; m++) {
-        const minX = 145 + (m - 1) * 50;
-        const maxX = 145 + m * 50;
+      // Distribute cell items into each month column based on header boundaries
+      monthHeaderPositions.forEach((hdr, idx) => {
+        const prevHdr = monthHeaderPositions[idx - 1];
+        const nextHdr = monthHeaderPositions[idx + 1];
+        const minX = prevHdr ? (prevHdr.x + hdr.x) / 2 : hdr.x - 25;
+        const maxX = nextHdr ? (hdr.x + nextHdr.x) / 2 : hdr.x + 35;
 
         const itemsInColumn = cellItems.filter(it => it.x >= minX && it.x < maxX);
-        if (itemsInColumn.length === 0) continue;
+        if (itemsInColumn.length === 0) return;
 
         // Extract numbers in this column cell
         const numberMatches: Array<{ text: string; num: number; x: number }> = [];
@@ -227,7 +250,7 @@ function extractMonthlyRecords(
           }
         });
 
-        if (numberMatches.length === 0) continue;
+        if (numberMatches.length === 0) return;
 
         let referencia = '1.00';
         let valor = 0;
@@ -252,40 +275,48 @@ function extractMonthlyRecords(
             categoria: classification.categoria
           };
 
-          const list = eventsByMonth.get(m) || [];
+          const compKey = `${pageYear}-${hdr.mes}`;
+          const list = eventsByComp.get(compKey) || [];
           const existingIdx = list.findIndex(e => e.codigo === eventCode);
           if (existingIdx >= 0) {
             list[existingIdx] = ev;
           } else {
             list.push(ev);
           }
-          eventsByMonth.set(m, list);
-          allActiveMonths.add(m);
+          eventsByComp.set(compKey, list);
+          activeMonthsPerYear.get(pageYear)!.add(hdr.mes);
         }
-      }
+      });
     });
   });
 
-  const activeMonthsList = Array.from(allActiveMonths);
-  const activeMonthCount = activeMonthsList.length > 0 ? Math.max(...activeMonthsList) : 8;
-
-  const competencias: string[] = [];
-  for (let m = 1; m <= activeMonthCount; m++) {
-    const mesStr = m.toString().padStart(2, '0');
-    competencias.push(`${mesStr}/${anoPadrao}`);
+  // If no active months were collected from pages, fallback to default year
+  if (activeMonthsPerYear.size === 0) {
+    activeMonthsPerYear.set(anoPadrao, new Set([1, 2, 3, 4, 5, 6, 7, 8]));
   }
 
-  const records: MonthlyRecord[] = competencias.map((comp) => {
-    const [m, y] = comp.split('/').map(Number);
-    const monthEvents = eventsByMonth.get(m) || [];
+  // Build sorted records and competencias across all discovered years
+  const sortedYears = Array.from(activeMonthsPerYear.keys()).sort((a, b) => a - b);
+  const records: MonthlyRecord[] = [];
+  const competencias: string[] = [];
 
-    return {
-      competencia: comp,
-      ano: y,
-      mes: m,
-      mesNome: MONTH_NAMES[m - 1] || `Mês ${m}`,
-      eventos: monthEvents
-    };
+  sortedYears.forEach(year => {
+    const monthsSet = activeMonthsPerYear.get(year);
+    if (!monthsSet || monthsSet.size === 0) return;
+    const maxMonth = Math.max(...Array.from(monthsSet));
+
+    for (let m = 1; m <= maxMonth; m++) {
+      const comp = `${m.toString().padStart(2, '0')}/${year}`;
+      const events = eventsByComp.get(`${year}-${m}`) || [];
+      competencias.push(comp);
+      records.push({
+        competencia: comp,
+        ano: year,
+        mes: m,
+        mesNome: MONTH_NAMES[m - 1] || `Mês ${m}`,
+        eventos: events
+      });
+    }
   });
 
   return { records, competencias };

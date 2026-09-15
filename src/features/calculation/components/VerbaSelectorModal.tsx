@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { UnifiedVerbaGroup } from '../../../core/types';
-import { Merge, Trash2, X, Filter, CheckCircle2, Search, Sparkles } from 'lucide-react';
+import { Merge, Trash2, X, Filter, CheckCircle2, Search, Sparkles, Pencil } from 'lucide-react';
 
 export interface VerbaItem {
   codigo: string;
@@ -32,8 +32,10 @@ export const VerbaSelectorModal: React.FC<VerbaSelectorModalProps> = ({
   const [unifyCodes, setUnifyCodes] = useState<string[]>([]);
   const [unifiedName, setUnifiedName] = useState<string>('');
   const [showUnifySection, setShowUnifySection] = useState<boolean>(false);
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<'TODAS' | 'RECOMENDADAS' | 'OPCIONAIS'>('TODAS');
+  const [unifySearchTerm, setUnifySearchTerm] = useState<string>('');
 
   // Synchronize internal state whenever the modal opens or props change
   useEffect(() => {
@@ -42,6 +44,8 @@ export const VerbaSelectorModal: React.FC<VerbaSelectorModalProps> = ({
       setTempUnified(unifiedGroups);
       setSearchTerm('');
       setCategoryFilter('TODAS');
+      setUnifySearchTerm('');
+      setEditingGroupId(null);
     }
   }, [isOpen, selectedCodes, unifiedGroups]);
 
@@ -82,6 +86,20 @@ export const VerbaSelectorModal: React.FC<VerbaSelectorModalProps> = ({
     );
   };
 
+  const handleStartEditGroup = (group: UnifiedVerbaGroup) => {
+    setEditingGroupId(group.id);
+    setUnifyCodes([...group.codigosOriginais]);
+    setUnifiedName(group.nomeUnificado);
+    setShowUnifySection(true);
+    setUnifySearchTerm('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingGroupId(null);
+    setUnifyCodes([]);
+    setUnifiedName('');
+  };
+
   const handleCreateUnifiedGroup = () => {
     if (unifyCodes.length < 2) {
       alert('Selecione pelo menos 2 verbas para unificar.');
@@ -89,6 +107,29 @@ export const VerbaSelectorModal: React.FC<VerbaSelectorModalProps> = ({
     }
     if (!unifiedName.trim()) {
       alert('Informe um nome para a verba unificada.');
+      return;
+    }
+
+    if (editingGroupId) {
+      const oldGroup = tempUnified.find(g => g.id === editingGroupId);
+      const removedCodes = oldGroup ? oldGroup.codigosOriginais.filter(c => !unifyCodes.includes(c)) : [];
+
+      setTempUnified(prev => prev.map(g => g.id === editingGroupId ? {
+        ...g,
+        nomeUnificado: unifiedName.trim().toUpperCase(),
+        codigosOriginais: [...unifyCodes]
+      } : g));
+
+      // Remove newly selected codes from standalone and restore deselected codes to standalone
+      setTempSelected(prev => {
+        const withoutNew = prev.filter(c => !unifyCodes.includes(c));
+        return Array.from(new Set([...withoutNew, ...removedCodes]));
+      });
+
+      setEditingGroupId(null);
+      setUnifyCodes([]);
+      setUnifiedName('');
+      setShowUnifySection(false);
       return;
     }
 
@@ -107,6 +148,9 @@ export const VerbaSelectorModal: React.FC<VerbaSelectorModalProps> = ({
   };
 
   const handleRemoveUnifiedGroup = (id: string) => {
+    if (editingGroupId === id) {
+      handleCancelEdit();
+    }
     const removedGroup = tempUnified.find(g => g.id === id);
     setTempUnified(prev => prev.filter(g => g.id !== id));
     if (removedGroup) {
@@ -155,6 +199,16 @@ export const VerbaSelectorModal: React.FC<VerbaSelectorModalProps> = ({
       return true;
     });
   }, [allAvailableVerbas, searchTerm, categoryFilter]);
+
+  // Filter verbas for unification by code or name
+  const filteredUnifyVerbas = useMemo(() => {
+    if (!unifySearchTerm.trim()) return allAvailableVerbas;
+    const term = unifySearchTerm.toLowerCase().trim();
+    return allAvailableVerbas.filter(v =>
+      v.codigo.toLowerCase().includes(term) ||
+      v.descricao.toLowerCase().includes(term)
+    );
+  }, [allAvailableVerbas, unifySearchTerm]);
 
   if (!isOpen) return null;
 
@@ -313,33 +367,111 @@ export const VerbaSelectorModal: React.FC<VerbaSelectorModalProps> = ({
             </div>
           </div>
 
-          {/* Section: Unify Verbas Creator */}
+          {/* Section: Unify Verbas Creator / Editor */}
           {showUnifySection && (
-            <div className="p-4 rounded-2xl bg-orange-50/50 dark:bg-[#17263a] border border-orange-200 dark:border-[#f88543]/40 space-y-3 animate-fade-in transition-colors">
-              <div className="flex items-center space-x-2 text-orange-800 dark:text-[#f88543] font-bold">
-                <Merge className="w-4 h-4" />
-                <span>Criar Linha Consolidada Unificada</span>
+            <div className={`p-4 rounded-2xl border space-y-3 animate-fade-in transition-colors ${
+              editingGroupId
+                ? 'bg-orange-100/30 dark:bg-[#1a2d45] border-[#ea580c] dark:border-[#f88543]'
+                : 'bg-orange-50/50 dark:bg-[#17263a] border-orange-200 dark:border-[#f88543]/40'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2 text-orange-800 dark:text-[#f88543] font-bold">
+                  {editingGroupId ? <Pencil className="w-4 h-4" /> : <Merge className="w-4 h-4" />}
+                  <span>{editingGroupId ? `Editar Grupo: ${unifiedName || 'Unificado'}` : 'Criar Linha Consolidada Unificada'}</span>
+                </div>
+                {editingGroupId && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 underline cursor-pointer"
+                  >
+                    Cancelar Edição
+                  </button>
+                )}
               </div>
               <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-                Marque abaixo as verbas que deseja agrupar em uma única linha no demonstrativo (ex: juntar horas extras de diferentes percentuais em uma só linha consolidada):
+                {editingGroupId
+                  ? 'Modifique abaixo as verbas integrantes deste grupo. Você pode marcar novas rubricas ou desmarcar existentes:'
+                  : 'Marque abaixo as verbas que deseja agrupar em uma única linha no demonstrativo (ex: juntar horas extras de diferentes percentuais em uma só linha consolidada):'}
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto p-2 bg-white dark:bg-[#0b131e] rounded-xl border border-slate-200 dark:border-[#324f72]/40">
-                {allAvailableVerbas.map(v => (
-                  <label
-                    key={`unify-${v.codigo}`}
-                    className="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1b2a3f] cursor-pointer transition-colors"
+              {/* Filtro de Pesquisa por Código ou Nome na Unificação */}
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Pesquisar verba por código ou nome (ex: 787, 815, Horas, Noturno)..."
+                  value={unifySearchTerm}
+                  onChange={(e) => setUnifySearchTerm(e.target.value)}
+                  className="w-full pl-8 pr-8 py-1.5 bg-white dark:bg-[#0b131e] border border-orange-200 dark:border-[#324f72] rounded-xl text-slate-900 dark:text-white font-medium text-xs focus:outline-none focus:border-[#ea580c] dark:focus:border-[#f88543] placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors shadow-2xs"
+                />
+                {unifySearchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setUnifySearchTerm('')}
+                    className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    title="Limpar pesquisa"
                   >
-                    <input
-                      type="checkbox"
-                      checked={unifyCodes.includes(v.codigo)}
-                      onChange={() => handleToggleForUnify(v.codigo)}
-                      className="accent-[#ea580c] dark:accent-[#f88543] w-4 h-4 rounded cursor-pointer"
-                    />
-                    <span className="font-mono font-bold text-slate-500 dark:text-slate-400">{v.codigo}</span>
-                    <span className="truncate text-slate-800 dark:text-slate-200">{v.descricao}</span>
-                  </label>
-                ))}
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Tags/Badges das verbas já selecionadas para unificar */}
+              {unifyCodes.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-xl bg-orange-100/60 dark:bg-[#0b131e]/60 border border-orange-200 dark:border-[#f88543]/30">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-orange-800 dark:text-[#f88543] mr-1">
+                    Selecionadas ({unifyCodes.length}):
+                  </span>
+                  {unifyCodes.map(c => {
+                    const item = allAvailableVerbas.find(v => v.codigo === c);
+                    return (
+                      <span
+                        key={`unify-badge-${c}`}
+                        className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-white dark:bg-[#1b2a3f] text-slate-800 dark:text-slate-200 text-[10px] font-bold border border-orange-300 dark:border-[#f88543]/50 shadow-2xs"
+                      >
+                        <span className="font-mono text-orange-700 dark:text-[#f88543]">{c}</span>
+                        <span className="truncate max-w-[140px]">{item?.descricao || c}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleForUnify(c)}
+                          className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer ml-1"
+                          title="Remover da seleção"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 bg-white dark:bg-[#0b131e] rounded-xl border border-slate-200 dark:border-[#324f72]/40">
+                {filteredUnifyVerbas.length === 0 ? (
+                  <div className="col-span-full py-4 text-center text-slate-400 dark:text-slate-500 text-xs">
+                    Nenhuma verba encontrada para a pesquisa "{unifySearchTerm}".
+                  </div>
+                ) : (
+                  filteredUnifyVerbas.map(v => (
+                    <label
+                      key={`unify-${v.codigo}`}
+                      className={`flex items-center space-x-2 p-1.5 rounded-lg cursor-pointer transition-colors ${
+                        unifyCodes.includes(v.codigo)
+                          ? 'bg-orange-50 dark:bg-[#f88543]/15 text-orange-950 dark:text-white'
+                          : 'hover:bg-slate-100 dark:hover:bg-[#1b2a3f]'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={unifyCodes.includes(v.codigo)}
+                        onChange={() => handleToggleForUnify(v.codigo)}
+                        className="accent-[#ea580c] dark:accent-[#f88543] w-4 h-4 rounded cursor-pointer"
+                      />
+                      <span className="font-mono font-bold text-slate-500 dark:text-slate-400">{v.codigo}</span>
+                      <span className="truncate text-slate-800 dark:text-slate-200">{v.descricao}</span>
+                    </label>
+                  ))
+                )}
               </div>
 
               <div className="flex items-center space-x-2 pt-2">
@@ -350,13 +482,22 @@ export const VerbaSelectorModal: React.FC<VerbaSelectorModalProps> = ({
                   onChange={(e) => setUnifiedName(e.target.value)}
                   className="flex-1 bg-white dark:bg-[#0b131e] border border-slate-300 dark:border-[#324f72] rounded-xl px-3 py-2 text-slate-900 dark:text-white font-bold text-xs focus:outline-none focus:border-[#ea580c] dark:focus:border-[#f88543] transition-colors"
                 />
+                {editingGroupId && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="px-3 py-2 bg-slate-200 dark:bg-[#1b2a3f] hover:bg-slate-300 dark:hover:bg-[#233752] text-slate-700 dark:text-slate-300 font-bold rounded-xl cursor-pointer transition-colors text-xs"
+                  >
+                    Cancelar
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={handleCreateUnifiedGroup}
                   disabled={unifyCodes.length < 2 || !unifiedName.trim()}
-                  className="px-4 py-2 bg-[#ea580c] dark:bg-[#f88543] hover:bg-[#c2410c] dark:hover:bg-[#df6824] disabled:opacity-50 text-white dark:text-slate-950 font-black rounded-xl cursor-pointer transition-colors"
+                  className="px-4 py-2 bg-[#ea580c] dark:bg-[#f88543] hover:bg-[#c2410c] dark:hover:bg-[#df6824] disabled:opacity-50 text-white dark:text-slate-950 font-black rounded-xl cursor-pointer transition-colors whitespace-nowrap text-xs shadow-xs"
                 >
-                  Unificar ({unifyCodes.length})
+                  {editingGroupId ? `Salvar Alterações (${unifyCodes.length})` : `Unificar (${unifyCodes.length})`}
                 </button>
               </div>
             </div>
@@ -378,7 +519,11 @@ export const VerbaSelectorModal: React.FC<VerbaSelectorModalProps> = ({
                 {tempUnified.map(group => (
                   <div
                     key={group.id}
-                    className="p-3 rounded-xl bg-white dark:bg-[#1b2a3f] border border-slate-200 dark:border-[#324f72] text-xs space-y-2 shadow-2xs transition-colors"
+                    className={`p-3 rounded-xl bg-white dark:bg-[#1b2a3f] border text-xs space-y-2 shadow-2xs transition-colors ${
+                      editingGroupId === group.id
+                        ? 'border-[#ea580c] dark:border-[#f88543] ring-1 ring-[#ea580c]/50 dark:ring-[#f88543]/50'
+                        : 'border-slate-200 dark:border-[#324f72]'
+                    }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
@@ -388,14 +533,29 @@ export const VerbaSelectorModal: React.FC<VerbaSelectorModalProps> = ({
                         <strong className="text-slate-900 dark:text-white font-extrabold text-sm">{group.nomeUnificado}</strong>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveUnifiedGroup(group.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:text-rose-400 dark:hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                        title="Remover este grupo unificado e desagrupar verbas"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center space-x-1">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditGroup(group)}
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            editingGroupId === group.id
+                              ? 'text-[#ea580c] dark:text-[#f88543] bg-orange-100 dark:bg-[#f88543]/20'
+                              : 'text-slate-400 hover:text-[#ea580c] dark:hover:text-[#f88543] hover:bg-orange-50 dark:hover:bg-[#f88543]/10'
+                          }`}
+                          title="Editar rubricas deste grupo unificado"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveUnifiedGroup(group.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:text-rose-400 dark:hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                          title="Remover este grupo unificado e desagrupar verbas"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap gap-1.5">

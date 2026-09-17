@@ -188,7 +188,7 @@ function extractMonthlyRecords(
     // Detect year on this page (e.g. "Rendimentos: 2024", "Exercício: 2024", etc.)
     const topLines = pageLines.slice(0, 15).join(' ');
     const pageYearMatch = topLines.match(/(?:Rendimentos|Exerc[íi]cio|Ano|Compet[êe]ncia)\s*[:\.-]?\s*(20[12]\d)/i) ||
-                          topLines.match(/\b(202[0-9])\b/);
+      topLines.match(/\b(202[0-9])\b/);
     const pageYear = pageYearMatch ? parseInt(pageYearMatch[1], 10) : lastDetectedYear;
     lastDetectedYear = pageYear;
 
@@ -363,7 +363,7 @@ export function classifyEventRubric(
 
   // 3. Códigos cadastrados de descontos e deduções do sistema Centi
   const KNOWN_DISCOUNT_CODES = [
-    "54", "1883", "142", "160", "640", "641", "657", "719", "86", "91", "94", "95", "101", "104", "282", "1121", "3359"
+    "54", "80", "1883", "142", "160", "640", "641", "657", "719", "86", "91", "94", "95", "101", "104", "282", "1121", "3359", "3879"
   ];
   if (KNOWN_DISCOUNT_CODES.includes(eventCode)) {
     return {
@@ -376,7 +376,7 @@ export function classifyEventRubric(
 
   // 4. Descontos, empréstimos, previdência, planos, indenizações e faltas
   if (
-    /IPARV|IPASGO|INSS|IRRF|CONSIGNADO|EMPR[EÉ]STIMO|DESCONTO|PENS[AÃ]O\s*ALIMENT|SINDICATO|MENSALIDADE|UNIMED|PLANO\s*DE\s*SA[UÚ]DE|VALE\s*TRANSPORTE|ADIANTAMENTO|SINDIVERDE|PLANO ODONTO|MULTA DE TRANSITO|INDENIZACAO LICENCA PREMIO|SINTRAERV|SEG|SEGURO/i.test(combined)
+    /IPARV|IPASGO|INSS|IRRF|CONSIGNADO|EMPR[EÉ]STIMO|DESCONTO|PENS[AÃ]O\s*ALIMENT|SINDICATO|MENSALIDADE|UNIMED|PLANO\s*DE\s*SA[UÚ]DE|VALE\s*TRANSPORTE|ADIANTAMENTO|SINDIVERDE|PLANO ODONTO|MULTA DE TRANSITO|INDENIZACAO LICENCA PREMIO|SINTRAERV|SEG|SEGURO|INSALUBRIDADE/i.test(combined)
   ) {
     return {
       defaultIgnored: true,

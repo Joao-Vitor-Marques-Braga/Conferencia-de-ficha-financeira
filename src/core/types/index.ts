@@ -32,6 +32,15 @@ export interface UnifiedVerbaGroup {
   id: string;
   nomeUnificado: string;
   codigosOriginais: string[];
+  templateId?: string;
+}
+
+export interface FavoriteUnifiedTemplate {
+  id: string;
+  nomeUnificado: string;
+  codigosOriginais: string[];
+  timestamp: string;
+  userId?: string;
 }
 
 export interface SplitMonthConfig {

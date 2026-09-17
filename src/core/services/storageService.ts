@@ -1,4 +1,4 @@
-import type { SavedCalculation } from '../types';
+import type { SavedCalculation, FavoriteUnifiedTemplate } from '../types';
 import { db, auth, isFirebaseConfigured } from '../config/firebase';
 import { 
   collection, 
@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 
 const STORAGE_KEY = 'centi_rio_verde_saved_calculations';
+const FAVORITE_UNIFICATIONS_KEY = 'centi_rio_verde_favorite_unifications';
 
 type StorageListener = () => void;
 const listeners = new Set<StorageListener>();
@@ -212,6 +213,110 @@ export const storageService = {
     } catch (err) {
       console.error('[StorageService] Erro ao iniciar listener Firestore:', err);
       onUpdate(this.getSavedCalculations());
+      return () => {};
+    }
+  },
+
+  getFavoriteUnifications(): FavoriteUnifiedTemplate[] {
+    try {
+      const data = localStorage.getItem(FAVORITE_UNIFICATIONS_KEY);
+      if (!data) return [];
+      return JSON.parse(data) as FavoriteUnifiedTemplate[];
+    } catch (err) {
+      console.error('[StorageService] Erro ao ler unificações favoritas do localStorage:', err);
+      return [];
+    }
+  },
+
+  async saveFavoriteUnification(template: FavoriteUnifiedTemplate): Promise<void> {
+    try {
+      // 1. Save to local cache immediately
+      const list = this.getFavoriteUnifications();
+      const existingIdx = list.findIndex(c => c.id === template.id || c.nomeUnificado === template.nomeUnificado);
+      if (existingIdx >= 0) {
+        list[existingIdx] = template;
+      } else {
+        list.unshift(template);
+      }
+      localStorage.setItem(FAVORITE_UNIFICATIONS_KEY, JSON.stringify(list));
+      notifyListeners();
+
+      // 2. If authenticated, persist in Cloud Firestore
+      const currentUser = auth?.currentUser;
+      if (isFirebaseConfigured && db && currentUser) {
+        const docRef = doc(db, 'users', currentUser.uid, 'favorite_unifications', template.id);
+        const firestoreData = sanitizeForFirestore(template) as Record<string, unknown>;
+        await setDoc(docRef, firestoreData, { merge: true });
+      }
+    } catch (err) {
+      console.error('[StorageService] Erro ao salvar unificação favorita:', err);
+      throw err;
+    }
+  },
+
+  async deleteFavoriteUnification(id: string): Promise<void> {
+    try {
+      // 1. Delete from local cache
+      const list = this.getFavoriteUnifications().filter(c => c.id !== id);
+      localStorage.setItem(FAVORITE_UNIFICATIONS_KEY, JSON.stringify(list));
+      notifyListeners();
+
+      // 2. Delete from Cloud Firestore if authenticated
+      const currentUser = auth?.currentUser;
+      if (isFirebaseConfigured && db && currentUser) {
+        const docRef = doc(db, 'users', currentUser.uid, 'favorite_unifications', id);
+        await deleteDoc(docRef);
+      }
+    } catch (err) {
+      console.error('[StorageService] Erro ao excluir unificação favorita:', err);
+    }
+  },
+
+  async fetchCloudFavoriteUnifications(uid: string): Promise<FavoriteUnifiedTemplate[]> {
+    if (!isFirebaseConfigured || !db) return this.getFavoriteUnifications();
+    try {
+      const colRef = collection(db, 'users', uid, 'favorite_unifications');
+      const q = query(colRef, orderBy('timestamp', 'desc'));
+      const snapshot = await getDocs(q);
+      const cloudItems: FavoriteUnifiedTemplate[] = [];
+      snapshot.forEach(docSnap => {
+        cloudItems.push(docSnap.data() as FavoriteUnifiedTemplate);
+      });
+      if (cloudItems.length > 0) {
+        localStorage.setItem(FAVORITE_UNIFICATIONS_KEY, JSON.stringify(cloudItems));
+        notifyListeners();
+        return cloudItems;
+      }
+      return this.getFavoriteUnifications();
+    } catch (err) {
+      console.warn('[StorageService] Falha ao buscar modelos de unificação da nuvem. Usando cache local:', err);
+      return this.getFavoriteUnifications();
+    }
+  },
+
+  listenToCloudFavoriteUnifications(uid: string, onUpdate: (items: FavoriteUnifiedTemplate[]) => void): Unsubscribe {
+    if (!isFirebaseConfigured || !db) {
+      onUpdate(this.getFavoriteUnifications());
+      return () => {};
+    }
+    try {
+      const colRef = collection(db, 'users', uid, 'favorite_unifications');
+      const q = query(colRef, orderBy('timestamp', 'desc'));
+      return onSnapshot(q, (snapshot) => {
+        const items: FavoriteUnifiedTemplate[] = [];
+        snapshot.forEach(docSnap => {
+          items.push(docSnap.data() as FavoriteUnifiedTemplate);
+        });
+        localStorage.setItem(FAVORITE_UNIFICATIONS_KEY, JSON.stringify(items));
+        notifyListeners();
+        onUpdate(items);
+      }, (err) => {
+        console.warn('[StorageService] Listener Firestore de unificações desconectado:', err);
+        onUpdate(this.getFavoriteUnifications());
+      });
+    } catch (err) {
+      console.error('[StorageService] Erro ao iniciar listener Firestore de unificações:', err);
+      onUpdate(this.getFavoriteUnifications());
       return () => {};
     }
   }
